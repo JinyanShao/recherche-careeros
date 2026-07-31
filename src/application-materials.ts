@@ -172,6 +172,12 @@ function endpoint(credentials: AiCredentials): string {
   const base = `${credentials.baseUrl.replace(/\/$/, '')}/`;
   return new URL(credentials.provider === 'anthropic' ? 'v1/messages' : 'chat/completions', base).toString();
 }
+function outputTokenParameter(model: string): 'max_tokens' | 'max_completion_tokens' {
+  return /^(gpt-5|o[1-9])(?:[.-]|$)/i.test(model.trim())
+    ? 'max_completion_tokens'
+    : 'max_tokens';
+}
+
 
 async function callModel(credentials: AiCredentials, content: string): Promise<{ value: unknown; inputTokens: number; outputTokens: number; endpoint: string }> {
   const url = endpoint(credentials);
@@ -186,7 +192,7 @@ async function callModel(credentials: AiCredentials, content: string): Promise<{
       body = { model: credentials.model, max_tokens: credentials.maxOutputTokens, temperature: credentials.temperature, system: 'Return valid JSON only.', messages: [{ role: 'user', content }] };
     } else {
       headers.authorization = `Bearer ${credentials.apiKey}`;
-      body = { model: credentials.model, temperature: credentials.temperature, max_tokens: credentials.maxOutputTokens, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'Return valid JSON only.' }, { role: 'user', content }] };
+      body = { model: credentials.model, temperature: credentials.temperature, [outputTokenParameter(credentials.model)]: credentials.maxOutputTokens, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'Return valid JSON only.' }, { role: 'user', content }] };
     }
     const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal });
     if (!response.ok) throw new Error(`模型接口返回 HTTP ${response.status}：${(await response.text()).slice(0, 1_000)}`);
