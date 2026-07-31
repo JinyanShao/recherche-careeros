@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws://localhost:*; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recherche CareerOS</title>
+    <meta name="author" content="Jinyan Shao" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">R</span>
+          <span>
+            <strong>Recherche CareerOS</strong>
+            <small>Career operating system</small>
+          </span>
+        </div>
+
+        <nav class="navigation" aria-label="主要导航">
+          <button class="nav-item active" data-view="overview">
+            <span class="nav-glyph">⌂</span><span>总览</span>
+          </button>
+          <button class="nav-item" data-view="cv">
+            <span class="nav-glyph">◫</span><span>简历</span>
+          </button>
+          <button class="nav-item" data-view="profile">
+            <span class="nav-glyph">◎</span><span>个人资料</span>
+          </button>
+          <button class="nav-item" data-view="analysis">
+            <span class="nav-glyph">◉</span><span>竞争力分析</span>
+            <span class="nav-count" id="nav-analysis-score">—</span>
+          </button>
+          <button class="nav-item" data-view="evaluation">
+            <span class="nav-glyph">◆</span><span>单岗位评估</span>
+            <span class="nav-count">A–G</span>
+          </button>
+          <button class="nav-item" data-view="ats">
+            <span class="nav-glyph">⌁</span><span>ATS 岗位中心</span>
+            <span class="nav-count" id="nav-ats-count">—</span>
+          </button>
+          <button class="nav-item" data-view="automation">
+            <span class="nav-glyph">◷</span><span>每日自动化</span>
+            <span class="nav-count" id="nav-batch-count">—</span>
+          </button>
+          <button class="nav-item" data-view="materials">
+            <span class="nav-glyph">▤</span><span>申请材料</span>
+            <span class="nav-count" id="nav-materials-count">—</span>
+          </button>
+          <button class="nav-item" data-view="pipeline">
+            <span class="nav-glyph">◇</span><span>岗位收件箱</span>
+            <span class="nav-count" id="nav-pipeline-count">—</span>
+          </button>
+          <button class="nav-item" data-view="tracker">
+            <span class="nav-glyph">▦</span><span>申请追踪</span>
+            <span class="nav-count" id="nav-tracker-count">—</span>
+          </button>
+          <button class="nav-item" data-view="reports">
+            <span class="nav-glyph">≡</span><span>评估报告</span>
+            <span class="nav-count" id="nav-report-count">—</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span class="status-dot"></span>
+          <div>
+            <strong>本地安全写入</strong>
+            <small>备份 · 原子保存 · 冲突检测</small>
+          </div>
+        </div>
+
+        <div class="workspace-path">
+          <span>当前资料库</span>
+          <code id="sidebar-root">正在验证…</code>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="titlebar">
+          <div>
+            <p class="eyebrow" id="view-eyebrow">工作区状态</p>
+            <h1 id="view-title">今天的求职资料</h1>
+          </div>
+          <div class="titlebar-actions">
+            <span class="read-only-pill"><span></span>用户层可编辑</span>
+            <button class="secondary-button" id="refresh-button" type="button">重新读取</button>
+            <button class="primary-button" id="choose-folder-button" type="button">选择 career-ops 文件夹</button>
+          </div>
+        </header>
+
+        <main>
+          <div class="notice hidden" id="notice" role="status" aria-live="polite"></div>
+
+          <section class="view active" id="overview-view">
+            <div class="ledger-ribbon" id="validation-ribbon">
+              <div class="ledger-state">
+                <span class="ledger-icon">✓</span>
+                <div>
+                  <strong id="validation-title">正在验证工作区</strong>
+                  <small id="validation-copy">检查 career-ops 的核心文件</small>
+                </div>
+              </div>
+              <div class="validation-checks" id="validation-checks"></div>
+            </div>
+
+            <div class="metric-strip">
+              <article>
+                <span>待处理岗位</span>
+                <strong id="metric-pending">—</strong>
+                <small>来自 pipeline.md</small>
+              </article>
+              <article>
+                <span>申请记录</span>
+                <strong id="metric-applications">—</strong>
+                <small>来自 applications.md</small>
+              </article>
+              <article>
+                <span>评估报告</span>
+                <strong id="metric-reports">—</strong>
+                <small>来自 reports/</small>
+              </article>
+              <article>
+                <span>目标岗位</span>
+                <strong id="metric-targets">—</strong>
+                <small>来自 profile.yml</small>
+              </article>
+            </div>
+
+            <div class="overview-grid">
+              <article class="panel profile-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">候选人资料</p>
+                    <h2 id="profile-name">—</h2>
+                  </div>
+                  <span class="file-badge">profile.yml</span>
+                </div>
+                <p class="profile-headline" id="profile-headline">—</p>
+                <dl class="profile-facts">
+                  <div><dt>地点</dt><dd id="profile-location">—</dd></div>
+                  <div><dt>输出语言</dt><dd id="profile-language">—</dd></div>
+                  <div><dt>模型层级</dt><dd id="profile-tier">—</dd></div>
+                </dl>
+                <div class="target-role-list" id="overview-target-roles"></div>
+              </article>
+
+              <article class="panel summary-panel">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">简历摘要</p>
+                    <h2>已验证的职业定位</h2>
+                  </div>
+                  <span class="file-badge">cv.md</span>
+                </div>
+                <p id="cv-summary">读取中…</p>
+                <button class="text-button" type="button" data-open-view="cv">查看完整简历 →</button>
+              </article>
+            </div>
+
+            <article class="panel inbox-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">最新收件箱</p>
+                  <h2>等待人工评估的岗位</h2>
+                </div>
+                <button class="text-button" type="button" data-open-view="pipeline">查看全部 →</button>
+              </div>
+              <div class="compact-job-list" id="overview-jobs"></div>
+            </article>
+          </section>
+
+          <section class="view" id="cv-view">
+            <div class="section-intro">
+              <div>
+                <p class="eyebrow">来源：cv.md</p>
+                <h2>简历事实来源</h2>
+                <p>直接编辑 canonical CV；保存前会检查磁盘版本并创建备份。</p>
+              </div>
+              <div class="editor-actions">
+                <span class="save-state" id="cv-save-state">未修改</span>
+                <span class="document-meta" id="cv-meta">—</span>
+                <button class="primary-button" id="save-cv-button" type="button" disabled>保存 CV</button>
+              </div>
+            </div>
+            <div class="document-layout">
+              <aside class="document-outline">
+                <span>文档章节</span>
+                <div id="cv-outline"></div>
+              </aside>
+              <article class="document-reader cv-editor-shell">
+                <label class="sr-only" for="cv-document">cv.md 内容</label>
+                <textarea id="cv-document" class="cv-editor" spellcheck="false"></textarea>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" id="profile-view">
+            <div class="section-intro">
+              <div>
+                <p class="eyebrow">来源：config/profile.yml</p>
+                <h2>个人资料、求职偏好与验证账本</h2>
+                <p>旧版 JSON 已停止作为运行时事实源；所有修改直接落到 career-ops 用户层。</p>
+              </div>
+              <div class="editor-actions">
+                <span class="save-state" id="profile-save-state">未修改</span>
+                <span class="document-meta" id="profile-meta">—</span>
+                <button class="primary-button" id="save-profile-button" type="button" disabled>保存资料</button>
+              </div>
+            </div>
+
+            <div class="migration-ribbon" id="migration-ribbon">
+              <div>
+                <span class="migration-kicker">迁移状态</span>
+                <strong id="migration-state">正在读取…</strong>
+                <small id="migration-detail">—</small>
+              </div>
+              <span class="source-boundary" id="migration-boundary">检查事实源边界</span>
+            </div>
+
+            <form id="profile-form" class="profile-workspace" autocomplete="off">
+              <section class="editor-card">
+                <div class="editor-card-heading">
+                  <div><p class="eyebrow">Personal profile</p><h3>个人资料</h3></div>
+                  <span>写入 profile.yml</span>
+                </div>
+                <div class="form-grid">
+                  <label class="field"><span>姓名</span><input id="field-full-name" data-fact-id="identity.name" maxlength="200" /></label>
+                  <label class="field"><span>职业定位</span><input id="field-headline" data-fact-id="identity.headline" maxlength="300" /></label>
+                  <label class="field wide"><span>当前地点</span><input id="field-location" data-fact-id="identity.location" maxlength="300" /></label>
+                  <label class="field"><span>邮箱</span><input id="field-email" type="email" maxlength="320" /></label>
+                  <label class="field"><span>电话</span><input id="field-phone" type="tel" maxlength="100" /></label>
+                  <label class="field wide"><span>目标岗位（每行一个）</span><textarea id="field-target-roles" data-fact-id="preference.target_roles" rows="4"></textarea></label>
+                </div>
+              </section>
+
+              <section class="editor-card">
+                <div class="editor-card-heading">
+                  <div><p class="eyebrow">Search preferences</p><h3>求职偏好</h3></div>
+                  <span>空值表示尚未确认</span>
+                </div>
+                <div class="form-grid">
+                  <label class="field"><span>国家</span><input id="field-country" maxlength="120" /></label>
+                  <label class="field"><span>城市</span><input id="field-city" maxlength="120" /></label>
+                  <label class="field"><span>时区</span><input id="field-timezone" maxlength="120" /></label>
+                  <label class="field"><span>岗位发布时间（天）</span><input id="field-max-age" type="number" min="1" max="365" /></label>
+                  <label class="field"><span>最低薪资</span><input id="field-minimum" data-fact-id="preference.compensation" maxlength="200" /></label>
+                  <label class="field"><span>目标薪资</span><input id="field-target-range" data-fact-id="preference.compensation" maxlength="200" /></label>
+                  <label class="field"><span>币种</span><input id="field-currency" maxlength="12" /></label>
+                  <label class="field"><span>地点灵活性</span><input id="field-location-flexibility" maxlength="500" /></label>
+                  <label class="field wide"><span>偏好地区（每行一个）</span><textarea id="field-preferred-regions" rows="3"></textarea></label>
+                  <fieldset class="choice-field wide" data-fact-id="preference.work_arrangement">
+                    <legend>工作方式</legend>
+                    <label><input type="checkbox" name="work-arrangement" value="Remote" />Remote</label>
+                    <label><input type="checkbox" name="work-arrangement" value="Hybrid" />Hybrid</label>
+                    <label><input type="checkbox" name="work-arrangement" value="On-site" />On-site</label>
+                  </fieldset>
+                  <fieldset class="choice-field wide">
+                    <legend>工作类型</legend>
+                    <label><input type="checkbox" name="employment-type" value="Full-time" />Full-time</label>
+                    <label><input type="checkbox" name="employment-type" value="Part-time" />Part-time</label>
+                    <label><input type="checkbox" name="employment-type" value="Internship" />Internship</label>
+                    <label><input type="checkbox" name="employment-type" value="Working student" />Working student</label>
+                    <label><input type="checkbox" name="employment-type" value="Contract" />Contract</label>
+                  </fieldset>
+                  <label class="field wide"><span>其他要求（每行一个）</span><textarea id="field-other-requirements" rows="3"></textarea></label>
+                  <div class="safety-policy wide">
+                    <span>申请安全策略</span>
+                    <strong>自动提交保持关闭</strong>
+                    <small>软件可以准备材料，但最终提交始终由你确认。</small>
+                  </div>
+                </div>
+              </section>
+
+              <section class="editor-card verification-card">
+                <div class="editor-card-heading">
+                  <div><p class="eyebrow">Evidence ledger</p><h3>事实验证状态</h3></div>
+                  <div class="verification-counts" id="verification-counts"></div>
+                </div>
+                <p class="card-explainer">验证账本只保存状态、来源与证据，不复制事实值。修改关联资料会自动降级为“待复核”。</p>
+                <div class="verification-list" id="verification-list"></div>
+              </section>
+            </form>
+          </section>
+
+          <section class="view" id="analysis-view">
+            <div class="section-intro analysis-intro">
+              <div>
+                <p class="eyebrow">阶段 3 · Evidence + market</p>
+                <h2>竞争力与市场分析</h2>
+                <p>评分基于已验证资料和 pipeline.md 的真实岗位样本，不代表录用概率或全市场排名。</p>
+              </div>
+              <div class="editor-actions">
+                <span class="analysis-provider" id="analysis-provider">读取分析引擎…</span>
+                <button class="secondary-button" id="run-ai-analysis-button" type="button" disabled>AI 深度建议</button>
+                <button class="primary-button" id="refresh-analysis-button" type="button">重新分析</button>
+              </div>
+            </div>
+
+            <div class="analysis-loading" id="analysis-loading">正在读取 CV、Profile 与岗位样本…</div>
+            <div class="analysis-content hidden" id="analysis-content">
+              <section class="analysis-score-band">
+                <div class="score-dial">
+                  <strong id="analysis-score">—</strong><span>/100</span>
+                </div>
+                <div class="score-copy">
+                  <p class="eyebrow">Evidence readiness</p>
+                  <h3 id="analysis-score-label">—</h3>
+                  <p id="analysis-score-disclaimer">—</p>
+                </div>
+                <div class="analysis-generated">
+                  <span>分析时间</span>
+                  <strong id="analysis-generated-at">—</strong>
+                </div>
+              </section>
+
+              <section class="analysis-section">
+                <div class="analysis-section-heading">
+                  <div><p class="eyebrow">Score breakdown</p><h3>评分维度</h3></div>
+                  <span>每项满分 20</span>
+                </div>
+                <div class="dimension-list" id="analysis-dimensions"></div>
+              </section>
+
+              <section class="analysis-section market-section">
+                <div class="analysis-section-heading">
+                  <div><p class="eyebrow">Local market snapshot</p><h3>当前岗位样本</h3></div>
+                  <span id="market-latest">—</span>
+                </div>
+                <div class="market-metrics">
+                  <article><span>样本岗位</span><strong id="market-sample">—</strong></article>
+                  <article><span>目标岗位族</span><strong id="market-target">—</strong></article>
+                  <article><span>瑞士岗位</span><strong id="market-swiss">—</strong></article>
+                  <article><span>偏好地区</span><strong id="market-preferred">—</strong></article>
+                  <article><span>Remote</span><strong id="market-remote">—</strong></article>
+                  <article><span>近 30 天</span><strong id="market-recent">—</strong></article>
+                </div>
+                <div class="market-columns">
+                  <div><h4>地点覆盖</h4><div class="rank-list" id="market-locations"></div></div>
+                  <div><h4>公司样本</h4><div class="rank-list" id="market-companies"></div></div>
+                  <div><h4>岗位级别</h4><div class="rank-list" id="market-seniority"></div></div>
+                  <div><h4>数据来源</h4><div class="rank-list" id="market-sources"></div></div>
+                </div>
+                <p class="market-limitation" id="market-limitation">—</p>
+              </section>
+
+              <section class="analysis-section advice-section">
+                <div class="analysis-section-heading">
+                  <div><p class="eyebrow">Action plan</p><h3>资料优化建议</h3></div>
+                  <div class="advice-filters" role="group" aria-label="建议类型">
+                    <button class="filter-chip active" type="button" data-advice-filter="all">全部</button>
+                    <button class="filter-chip" type="button" data-advice-filter="CV">CV</button>
+                    <button class="filter-chip" type="button" data-advice-filter="LinkedIn">LinkedIn</button>
+                    <button class="filter-chip" type="button" data-advice-filter="GitHub">GitHub</button>
+                    <button class="filter-chip" type="button" data-advice-filter="Portfolio">作品集</button>
+                  </div>
+                </div>
+                <div class="advice-list" id="analysis-advice"></div>
+              </section>
+
+              <section class="analysis-section positioning-section">
+                <div class="analysis-section-heading">
+                  <div><p class="eyebrow">Confirm before write</p><h3>个人定位草案</h3></div>
+                  <span>目标：config/profile.yml#narrative</span>
+                </div>
+                <div class="positioning-preview">
+                  <div><span>Headline</span><strong id="positioning-headline">—</strong></div>
+                  <div><span>Positioning statement</span><p id="positioning-statement">—</p></div>
+                  <div><span>Strengths with evidence</span><div id="positioning-strengths"></div></div>
+                </div>
+                <div class="confirmation-bar">
+                  <label><input id="positioning-confirm-checkbox" type="checkbox" />我已检查草案及证据，确认写入个人定位配置</label>
+                  <button class="primary-button" id="confirm-positioning-button" type="button" disabled>确认并写入</button>
+                </div>
+              </section>
+
+              <section class="analysis-limitations">
+                <h3>分析边界</h3>
+                <ul id="analysis-limitations"></ul>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="evaluation-view">
+            <div class="section-intro evaluation-intro">
+              <div>
+                <p class="eyebrow">阶段 4 · One role, full audit</p>
+                <h2>单岗位完整评估</h2>
+                <p>先验证岗位存活并提取正文，再用已验证资料生成 A–G 报告。不会自动投递。</p>
+              </div>
+              <span class="model-status" id="evaluation-model-status">正在读取模型设置…</span>
+            </div>
+
+            <div class="evaluation-command-grid">
+              <section class="evaluation-input-pane">
+                <div class="evaluation-pane-heading">
+                  <div><p class="eyebrow">Job source</p><h3>输入岗位</h3></div>
+                  <div class="input-mode-switch" role="group" aria-label="岗位输入方式">
+                    <button class="active" type="button" data-job-input="url">URL</button>
+                    <button type="button" data-job-input="jd">JD 文本</button>
+                  </div>
+                </div>
+                <label class="evaluation-source-field" id="job-url-field">
+                  <span>招聘页面 URL</span>
+                  <input id="job-url-input" type="url" placeholder="https://company.com/jobs/123" autocomplete="off" />
+                  <small>URL 会先经过 career-ops ATS API / Playwright 存活检测。</small>
+                </label>
+                <label class="evaluation-source-field hidden" id="job-jd-field">
+                  <span>完整 JD</span>
+                  <textarea id="job-jd-input" rows="10" placeholder="粘贴岗位名称、职责、要求、地点和薪资等完整内容…"></textarea>
+                  <small>粘贴文本无法验证公开页面是否仍然接受申请。</small>
+                </label>
+                <div class="evaluation-run-row">
+                  <div class="evaluation-audit-rail" aria-label="评估步骤">
+                    <span>存活</span><i></i><span>提取</span><i></i><span>A–G</span><i></i><span>报告</span>
+                  </div>
+                  <button class="primary-button" id="run-job-evaluation-button" type="button">开始完整评估</button>
+                </div>
+              </section>
+
+              <form class="model-settings-pane" id="model-settings-form" autocomplete="off">
+                <div class="evaluation-pane-heading">
+                  <div><p class="eyebrow">Private model access</p><h3>模型与 API Key</h3></div>
+                  <span class="key-state" id="model-key-state">未配置</span>
+                </div>
+                <div class="model-service-tabs" id="model-service-tabs" aria-label="模型服务"></div>
+                <div class="model-add-row">
+                  <button class="model-add-button" id="add-model-service-button" type="button"><span>＋</span>新增服务</button>
+                  <div class="model-preset-menu hidden" id="model-preset-menu">
+                    <button type="button" data-create-model-preset="openai">OpenAI</button>
+                    <button type="button" data-create-model-preset="deepseek">DeepSeek</button>
+                    <button type="button" data-create-model-preset="anthropic">Anthropic</button>
+                    <button type="button" data-create-model-preset="openrouter">OpenRouter</button>
+                    <button type="button" data-create-model-preset="ollama">Ollama 本地</button>
+                    <button type="button" data-create-model-preset="lm-studio">LM Studio 本地</button>
+                    <button type="button" data-create-model-preset="custom">自定义</button>
+                  </div>
+                </div>
+                <div class="model-settings-grid">
+                  <label><span>名称</span><input id="model-service-name" maxlength="100" placeholder="我的服务" /></label>
+                  <label><span>协议</span><select id="model-provider"><option value="openai-compatible">OpenAI 兼容</option><option value="anthropic">Anthropic Claude</option></select></label>
+                  <label class="wide"><span>接口地址 Base URL</span><input id="model-base-url" type="url" maxlength="500" /><small>填写到 /v1 即可；也可粘贴完整的 /chat/completions 地址。</small></label>
+                  <label class="wide"><span>API Key</span><span class="secret-input"><input id="model-api-key" type="password" maxlength="16000" placeholder="留空则保留已保存的 Key" autocomplete="new-password" /><button id="toggle-model-key-button" type="button" title="显示或隐藏 API Key" aria-label="显示或隐藏 API Key">◉</button></span><small>Key 只使用 macOS 安全存储加密保存在本机。</small></label>
+                  <label class="wide"><span>模型</span><span class="model-picker-line"><input id="model-name" list="model-options" maxlength="200" placeholder="gpt-5.6-sol" /><button class="secondary-button" id="refresh-model-list-button" type="button">⟳ 模型列表</button></span><datalist id="model-options"></datalist></label>
+                  <label><span>温度</span><input id="model-temperature" type="number" min="0" max="2" step="0.1" /></label>
+                  <label><span>最大输出 Token</span><input id="model-max-output" type="number" min="1" max="128000" step="1" /></label>
+                  <label><span>超时（秒）</span><input id="model-timeout" type="number" min="5" max="600" step="1" /></label>
+                  <label><span>输入价格 / 1M Token</span><input id="model-input-price" type="number" min="0" step="0.000001" placeholder="可选，USD" /></label>
+                  <label><span>输出价格 / 1M Token</span><input id="model-output-price" type="number" min="0" step="0.000001" placeholder="可选，USD" /></label>
+                  <label class="model-vision-toggle wide"><span><strong>该模型支持读图</strong><small>用于未来的图片文字识别和视觉材料处理</small></span><input id="model-supports-vision" type="checkbox" role="switch" /></label>
+                </div>
+                <p class="key-security-copy" id="key-security-copy">Key 使用 macOS 安全存储加密；渲染界面无法读取原文。</p>
+                <div class="model-settings-actions">
+                  <div class="model-connection-actions"><button class="primary-button" id="test-model-connection-button" type="button">测试连接</button><span id="model-connection-state">尚未测试</span></div>
+                  <div><button class="text-button danger-text" id="delete-model-service-button" type="button">删除服务</button><button class="text-button danger-text" id="clear-model-key-button" type="button">清除 Key</button><button class="secondary-button" id="save-model-settings-button" type="submit" aria-label="保存模型设置并使用">保存并使用</button></div>
+                </div>
+                <div class="model-quick-presets"><span>快速填入预设</span><button type="button" data-apply-model-preset="openai">OpenAI</button><button type="button" data-apply-model-preset="deepseek">DeepSeek</button><button type="button" data-apply-model-preset="anthropic">Anthropic</button><button type="button" data-apply-model-preset="openrouter">OpenRouter</button><button type="button" data-apply-model-preset="ollama">Ollama</button><button type="button" data-apply-model-preset="lm-studio">LM Studio</button></div>
+              </form>
+            </div>
+
+            <section class="evaluation-running hidden" id="evaluation-running" aria-live="polite">
+              <span class="running-mark"></span>
+              <div><strong>正在完成单岗位审计</strong><p>URL 评估可能需要等待招聘页面加载；模型只会收到当前岗位和 career-ops 允许的事实来源。</p></div>
+            </section>
+
+            <section class="evaluation-error hidden" id="evaluation-error" role="alert">
+              <div><span id="evaluation-error-stage">错误</span><strong id="evaluation-error-title">评估未完成</strong></div>
+              <p id="evaluation-error-detail">—</p>
+            </section>
+
+            <div class="evaluation-result hidden" id="evaluation-result">
+              <section class="evaluation-verdict-band">
+                <div class="evaluation-score"><strong id="job-evaluation-score">—</strong><span>/5</span></div>
+                <div class="evaluation-verdict-copy">
+                  <p class="eyebrow" id="job-evaluation-decision">—</p>
+                  <h3><span id="job-evaluation-company">—</span> · <span id="job-evaluation-role">—</span></h3>
+                  <p><span id="job-evaluation-archetype">—</span> · <span id="job-evaluation-location">—</span></p>
+                </div>
+                <button class="secondary-button" id="open-generated-report-button" type="button">查看真实报告</button>
+              </section>
+
+              <section class="evaluation-run-metrics">
+                <article><span>存活状态</span><strong id="job-liveness-status">—</strong><small id="job-liveness-engine">—</small></article>
+                <article><span>模型</span><strong id="job-model-name">—</strong><small id="job-model-provider">—</small></article>
+                <article><span>Token</span><strong id="job-token-count">—</strong><small id="job-token-split">—</small></article>
+                <article><span>估算成本</span><strong id="job-cost">—</strong><small id="job-pricing-source">—</small></article>
+                <article><span>有效证据</span><strong id="job-evidence-count">—</strong><small>通过本地逐条核验</small></article>
+                <article><span>报告</span><strong id="job-report-number">—</strong><small id="job-tracker-status">—</small></article>
+              </section>
+
+              <section class="evaluation-blocks-section">
+                <div class="analysis-section-heading">
+                  <div><p class="eyebrow">A–G evaluation</p><h3>完整评估区块</h3></div>
+                  <span id="job-legitimacy-tier">—</span>
+                </div>
+                <div class="evaluation-block-list" id="job-evaluation-blocks"></div>
+              </section>
+
+              <div class="evaluation-bottom-grid">
+                <section>
+                  <div class="analysis-section-heading"><div><p class="eyebrow">Risk register</p><h3>风险</h3></div></div>
+                  <div class="evaluation-risk-list" id="job-risk-summary"></div>
+                </section>
+                <section>
+                  <div class="analysis-section-heading"><div><p class="eyebrow">Errors + limits</p><h3>错误与分析边界</h3></div></div>
+                  <ul class="evaluation-error-list" id="job-evaluation-errors"></ul>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="ats-view">
+            <div class="section-intro ats-intro">
+              <div>
+                <p class="eyebrow">阶段 5 · Zero-token discovery</p>
+                <h2>ATS 扫描与岗位中心</h2>
+                <p>直接驱动 career-ops 扫描器；配置和结果继续保存在用户层。</p>
+              </div>
+              <div class="editor-actions">
+                <span class="save-state" id="portal-save-state">未修改</span>
+                <span class="document-meta" id="portal-meta">—</span>
+                <button class="primary-button" id="save-portals-button" type="button" disabled>保存 Portal</button>
+              </div>
+            </div>
+
+            <div class="ats-metrics" aria-label="岗位中心概况">
+              <article><span>扫描记录</span><strong id="ats-total-jobs">—</strong><small>历史唯一 URL</small></article>
+              <article><span>待处理</span><strong id="ats-pipeline-jobs">—</strong><small>已进入 Pipeline</small></article>
+              <article><span>7 天内</span><strong id="ats-fresh-jobs">—</strong><small>有发布时间证据</small></article>
+              <article><span>需复核</span><strong id="ats-risk-jobs">—</strong><small>信任或重复信号</small></article>
+              <article><span>Portal 异常</span><strong id="ats-health-count">—</strong><small>最新健康记录</small></article>
+            </div>
+
+            <section class="scan-console" aria-labelledby="scan-console-title">
+              <div class="scan-console-heading">
+                <div><p class="eyebrow">Scanner control</p><h3 id="scan-console-title">运行扫描</h3></div>
+                <div class="segmented-control" aria-label="扫描模式">
+                  <button class="active" type="button" data-scan-mode="quick">Portal 扫描</button>
+                  <button type="button" data-scan-mode="full">全量反向扫描</button>
+                </div>
+              </div>
+              <div class="scan-controls" id="quick-scan-controls">
+                <label><span>公司（可选）</span><select id="quick-scan-company"><option value="">全部已启用 Portal</option></select></label>
+                <label><span>发布起始日</span><input id="quick-posted-after" type="date" /></label>
+                <label><span>发布截止日</span><input id="quick-posted-before" type="date" /></label>
+                <label class="toggle-line"><input id="quick-verify" type="checkbox" /><span>Playwright 存活检测</span></label>
+                <label class="toggle-line"><input id="quick-dry-run" type="checkbox" /><span>仅预览，不写入</span></label>
+              </div>
+              <div class="scan-controls hidden" id="full-scan-controls">
+                <label><span>最近天数</span><input id="full-since-days" type="number" min="1" max="365" value="3" /></label>
+                <label><span>每个 ATS 公司上限</span><input id="full-limit" type="number" min="1" max="100000" placeholder="不限制" /></label>
+                <fieldset class="ats-provider-choice"><legend>ATS 数据集</legend>
+                  <label><input type="checkbox" name="full-ats" value="greenhouse" checked />Greenhouse</label>
+                  <label><input type="checkbox" name="full-ats" value="lever" checked />Lever</label>
+                  <label><input type="checkbox" name="full-ats" value="ashby" checked />Ashby</label>
+                  <label><input type="checkbox" name="full-ats" value="workday" />Workday</label>
+                  <label><input type="checkbox" name="full-ats" value="icims" />iCIMS</label>
+                </fieldset>
+                <label class="toggle-line"><input id="full-liveness" type="checkbox" /><span>验证匹配岗位存活</span></label>
+                <label class="toggle-line"><input id="full-resume" type="checkbox" /><span>从断点继续</span></label>
+                <label class="toggle-line"><input id="full-include-undated" type="checkbox" /><span>包含无发布时间岗位</span></label>
+                <label class="toggle-line"><input id="full-dry-run" type="checkbox" /><span>仅预览，不写入</span></label>
+              </div>
+              <div class="scan-action-row">
+                <div class="scan-state-line"><span class="status-dot" id="scan-state-dot"></span><strong id="scan-state-label">未运行</strong><small id="scan-state-time">—</small></div>
+                <div><button class="secondary-button hidden" id="cancel-scan-button" type="button">停止扫描</button><button class="primary-button" id="start-scan-button" type="button">开始 Portal 扫描</button></div>
+              </div>
+              <pre class="scan-log" id="scan-log">等待扫描任务。</pre>
+            </section>
+
+            <div class="ats-tabs" role="tablist" aria-label="岗位中心视图">
+              <button class="active" type="button" data-ats-tab="jobs">岗位中心</button>
+              <button type="button" data-ats-tab="portals">Provider 与 Portal</button>
+              <button type="button" data-ats-tab="filters">过滤规则</button>
+              <button type="button" data-ats-tab="runs">扫描历史</button>
+            </div>
+
+            <section class="ats-tab-panel" id="ats-jobs-panel">
+              <div class="job-center-toolbar">
+                <label class="search-field"><span>筛选岗位</span><input id="ats-job-search" type="search" placeholder="公司、岗位、地点或 Provider" /></label>
+                <select id="ats-job-state" aria-label="岗位状态">
+                  <option value="all">全部状态</option><option value="fresh">7 天内</option><option value="pipeline">待处理</option><option value="risk">需复核</option><option value="expired">已失效</option>
+                </select>
+                <span id="ats-visible-count">—</span>
+              </div>
+              <div class="table-shell ats-table-shell"><table class="ats-job-table"><thead><tr><th>岗位</th><th>Provider</th><th>发布时间</th><th>真实性</th><th>去重</th><th>健康</th></tr></thead><tbody id="ats-job-body"></tbody></table><div class="empty-state hidden" id="ats-job-empty"><span>⌁</span><h3>暂无岗位记录</h3><p>运行扫描后，真实结果会出现在这里。</p></div></div>
+            </section>
+
+            <section class="ats-tab-panel hidden" id="ats-portals-panel">
+              <div class="portal-toolbar"><div><strong id="portal-count-label">—</strong><span>Provider 自动按配置和 URL 识别</span></div><button class="secondary-button" id="add-portal-button" type="button">添加 Portal</button></div>
+              <div class="provider-strip" id="provider-strip"></div>
+              <div class="portal-list" id="portal-list"></div>
+            </section>
+
+            <section class="ats-tab-panel hidden" id="ats-filters-panel">
+              <div class="filter-editor-grid">
+                <label><span>岗位标题包含词（每行一个）</span><textarea id="portal-title-positive" rows="8"></textarea></label>
+                <label><span>岗位标题排除词（每行一个）</span><textarea id="portal-title-negative" rows="8"></textarea></label>
+                <label><span>地点优先允许词</span><textarea id="portal-location-always" rows="6"></textarea></label>
+                <label><span>地点允许词</span><textarea id="portal-location-allow" rows="6"></textarea></label>
+                <label><span>地点排除词</span><textarea id="portal-location-block" rows="6"></textarea></label>
+                <div class="filter-settings-block"><label><span>最长发布时间（天）</span><input id="portal-max-age" type="number" min="1" max="3650" placeholder="不限制" /></label><label class="toggle-line"><input id="portal-trust-enabled" type="checkbox" /><span>启用真实性启发式标注</span></label></div>
+              </div>
+            </section>
+
+            <section class="ats-tab-panel hidden" id="ats-runs-panel">
+              <div class="table-shell"><table><thead><tr><th>时间</th><th>覆盖</th><th>发现</th><th>过滤</th><th>重复</th><th>新增</th><th>错误</th></tr></thead><tbody id="ats-runs-body"></tbody></table><div class="empty-state hidden" id="ats-runs-empty"><span>◷</span><h3>还没有扫描历史</h3><p>真实运行会追加到 data/scan-runs.tsv。</p></div></div>
+            </section>
+          </section>
+
+          <section class="view" id="automation-view">
+            <div class="section-intro automation-intro">
+              <div>
+                <p class="eyebrow">阶段 6 · Batch operations</p>
+                <h2>批量评分与每日自动化</h2>
+                <p>处理 pipeline.md 中的待评估岗位，产物仍写回 career-ops 报告、Tracker 与批处理 TSV。</p>
+              </div>
+              <button class="secondary-button" id="refresh-automation-button" type="button">重新读取任务</button>
+            </div>
+
+            <div class="automation-metrics">
+              <article><span>待处理</span><strong id="batch-pending-count">—</strong><small>pipeline.md</small></article>
+              <article><span>排队</span><strong id="batch-queued-count">—</strong><small>本次批处理</small></article>
+              <article><span>运行中</span><strong id="batch-active-count">—</strong><small id="batch-concurrency-label">并发 —</small></article>
+              <article><span>已完成</span><strong id="batch-completed-count">—</strong><small>本次批处理</small></article>
+              <article><span>失败</span><strong id="batch-failed-count">—</strong><small>可单独重试</small></article>
+            </div>
+
+            <div class="automation-grid">
+              <section class="batch-control-panel">
+                <div class="automation-panel-heading">
+                  <div><p class="eyebrow">Pipeline batch</p><h3>批量评分</h3></div>
+                  <div class="batch-state"><span class="status-dot" id="batch-state-dot"></span><strong id="batch-state-label">未运行</strong></div>
+                </div>
+                <div class="batch-options-grid">
+                  <label><span>并发数</span><input id="batch-concurrency" type="number" min="1" max="6" value="2" /></label>
+                  <label><span>失败重试</span><input id="batch-max-retries" type="number" min="0" max="5" value="2" /></label>
+                  <label><span>重试等待（秒）</span><input id="batch-retry-delay" type="number" min="0" max="300" value="15" /></label>
+                  <label><span>本次上限（0 = 全部）</span><input id="batch-limit" type="number" min="0" max="1000" value="20" /></label>
+                  <label><span>高分通知阈值</span><input id="batch-notify-score" type="number" min="1" max="5" step="0.1" value="4" /></label>
+                </div>
+                <div class="batch-action-row">
+                  <span id="batch-run-time">尚未开始</span>
+                  <div>
+                    <button class="secondary-button" id="retry-failed-button" type="button">重试失败项</button>
+                    <button class="secondary-button" id="resume-batch-button" type="button">恢复未完成</button>
+                    <button class="danger-button hidden" id="cancel-batch-button" type="button">停止任务</button>
+                    <button class="primary-button" id="start-batch-button" type="button">开始批量评分</button>
+                  </div>
+                </div>
+              </section>
+
+              <form class="schedule-panel" id="daily-automation-form" autocomplete="off">
+                <div class="automation-panel-heading">
+                  <div><p class="eyebrow">macOS LaunchAgent</p><h3>每日计划</h3></div>
+                  <span class="schedule-state" id="schedule-state">未安装</span>
+                </div>
+                <label class="schedule-toggle"><input id="schedule-enabled" type="checkbox" /><span><strong>每天自动运行</strong><small>由 macOS 在后台唤醒 Recherche CareerOS</small></span></label>
+                <div class="schedule-time-grid">
+                  <label><span>小时</span><input id="schedule-hour" type="number" min="0" max="23" /></label>
+                  <label><span>分钟</span><input id="schedule-minute" type="number" min="0" max="59" /></label>
+                </div>
+                <dl class="schedule-details">
+                  <div><dt>下次运行</dt><dd id="schedule-next-run">—</dd></div>
+                  <div><dt>LaunchAgent</dt><dd id="schedule-label">—</dd></div>
+                  <div><dt>日志目录</dt><dd id="schedule-log-path">—</dd></div>
+                </dl>
+                <button class="primary-button" id="save-schedule-button" type="submit">保存每日计划</button>
+              </form>
+            </div>
+
+            <section class="batch-queue-panel">
+              <div class="automation-panel-heading">
+                <div><p class="eyebrow">Native batch state</p><h3>岗位队列</h3></div>
+                <span id="batch-jobs-count">—</span>
+              </div>
+              <div class="table-shell batch-table-shell">
+                <table class="batch-table"><thead><tr><th>#</th><th>公司与岗位</th><th>状态</th><th>评分</th><th>重试</th><th>报告 / 错误</th></tr></thead><tbody id="batch-jobs-body"></tbody></table>
+                <div class="empty-state hidden" id="batch-jobs-empty"><span>◇</span><h3>队列还没有任务</h3><p>ATS 扫描写入 pipeline.md 后，这里会同步创建批处理任务。</p></div>
+              </div>
+            </section>
+
+            <section class="batch-log-panel">
+              <div class="automation-panel-heading"><div><p class="eyebrow">Task journal</p><h3>任务日志</h3></div><span id="batch-high-match-count">0 个高分岗位</span></div>
+              <pre class="scan-log batch-log" id="batch-log">等待批量任务。</pre>
+            </section>
+          </section>
+
+          <section class="view" id="materials-view">
+            <div class="section-intro materials-intro">
+              <div>
+                <p class="eyebrow">阶段 7 · Application kit</p>
+                <h2>针对岗位生成申请材料</h2>
+                <p>从已验证用户资料与岗位报告生成不可变版本；所有内容仅保存为草稿，不会发送、发布或投递。</p>
+              </div>
+              <div class="materials-header-state">
+                <span id="latex-compiler-state">检查 LaTeX 编译器…</span>
+                <button class="secondary-button" id="refresh-materials-button" type="button">重新读取历史</button>
+              </div>
+            </div>
+
+            <div class="materials-layout">
+              <form class="material-generator" id="material-generator-form" autocomplete="off">
+                <div class="automation-panel-heading">
+                  <div><p class="eyebrow">Confirmed inputs</p><h3>生成设置</h3></div>
+                  <span id="material-model-state">使用模型设置中的 Key</span>
+                </div>
+                <label class="material-field"><span>岗位评估报告</span><select id="material-report" required><option value="">请选择报告</option></select></label>
+                <div class="material-report-summary" id="material-report-summary">
+                  <strong>尚未选择岗位</strong><span>先完成阶段 4 评估，再生成申请材料。</span>
+                </div>
+                <label class="material-field"><span>为什么申请这个岗位</span><textarea id="material-motivation" rows="4" maxlength="4000" required placeholder="输入你确认过的真实动机"></textarea></label>
+                <label class="material-field"><span>你对公司问题或机会的理解</span><textarea id="material-company-context" rows="4" maxlength="6000" required placeholder="输入你确认过的公司背景与问题"></textarea></label>
+                <label class="material-field"><span>入职后会采取的第一步</span><textarea id="material-first-move" rows="4" maxlength="4000" required placeholder="输入你愿意在面试中解释的第一步"></textarea></label>
+                <div class="material-form-grid">
+                  <label class="material-field"><span>语气</span><select id="material-tone"><option value="formal">正式</option><option value="direct">直接</option><option value="conversational">自然对话</option><option value="mirror-jd">贴合 JD 语气</option></select></label>
+                  <label class="material-field"><span>纸张</span><select id="material-page-format"><option value="auto">按岗位市场自动</option><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
+                  <label class="material-field"><span>招聘负责人（可选）</span><input id="material-hiring-manager" maxlength="300" /></label>
+                  <label class="material-field"><span>版本备注（可选）</span><input id="material-version-note" maxlength="500" /></label>
+                </div>
+                <label class="material-override hidden" id="material-low-score-gate"><input id="material-low-score-override" type="checkbox" /><span><strong>该岗位低于 4.0/5</strong><small>career-ops 默认不建议申请。仅在你明确决定继续时勾选。</small></span></label>
+                <div class="material-generate-row">
+                  <span id="material-generation-state">等待输入</span>
+                  <button class="primary-button" id="generate-materials-button" type="submit">生成新版本</button>
+                </div>
+              </form>
+
+              <section class="material-workbench">
+                <div class="material-empty" id="material-empty">
+                  <span>▤</span><h3>还没有申请材料版本</h3><p>完成一次生成后，这里会显示 CV、PDF、LaTeX 和所有沟通草稿。</p>
+                </div>
+                <div class="hidden" id="material-active-version">
+                  <header class="material-version-header">
+                    <div><p class="eyebrow" id="material-version-label">—</p><h3 id="material-version-title">—</h3><span id="material-version-meta">—</span></div>
+                    <div class="material-model-meta"><strong id="material-version-model">—</strong><span id="material-version-cost">—</span></div>
+                  </header>
+                  <div class="material-tabs" role="tablist" aria-label="申请材料预览">
+                    <button class="active" type="button" data-material-tab="artifacts">文件</button>
+                    <button type="button" data-material-tab="cover">求职信</button>
+                    <button type="button" data-material-tab="email">邮件</button>
+                    <button type="button" data-material-tab="linkedin">LinkedIn</button>
+                  </div>
+                  <div class="material-preview" id="material-preview"></div>
+                  <div class="material-warnings hidden" id="material-warnings"></div>
+                </div>
+              </section>
+            </div>
+
+            <div class="material-history-layout">
+              <section class="material-history-panel">
+                <div class="automation-panel-heading"><div><p class="eyebrow">Immutable history</p><h3>生成历史</h3></div><span id="material-history-count">0 个版本</span></div>
+                <div class="material-history-list" id="material-history-list"></div>
+              </section>
+              <section class="material-comparison-panel">
+                <div class="automation-panel-heading"><div><p class="eyebrow">Version comparison</p><h3>版本比较</h3></div><span>按文件逐行比较</span></div>
+                <div class="comparison-controls">
+                  <label><span>材料包</span><select id="comparison-package"></select></label>
+                  <label><span>旧版本</span><select id="comparison-from"></select></label>
+                  <label><span>新版本</span><select id="comparison-to"></select></label>
+                  <button class="secondary-button" id="compare-materials-button" type="button">比较版本</button>
+                </div>
+                <div class="comparison-result" id="comparison-result"><p>同一岗位生成两个版本后，可以查看 CV 与沟通材料的增删内容。</p></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="pipeline-view">
+            <div class="section-intro">
+              <div>
+                <p class="eyebrow">来源：data/pipeline.md</p>
+                <h2>岗位收件箱</h2>
+                <p>显示扫描器已经写入的真实岗位；这里不会运行扫描。</p>
+              </div>
+              <label class="search-field">
+                <span>筛选岗位</span>
+                <input id="pipeline-search" type="search" placeholder="公司、岗位或地点" autocomplete="off" />
+              </label>
+            </div>
+            <div class="filter-row">
+              <button class="filter-chip active" type="button" data-pipeline-filter="pending">待处理 <span id="pending-count">—</span></button>
+              <button class="filter-chip" type="button" data-pipeline-filter="processed">已处理 <span id="processed-count">—</span></button>
+              <button class="filter-chip" type="button" data-pipeline-filter="all">全部 <span id="pipeline-total-count">—</span></button>
+            </div>
+            <div class="job-list" id="pipeline-jobs"></div>
+          </section>
+
+          <section class="view" id="tracker-view">
+            <div class="section-intro">
+              <div>
+                <p class="eyebrow">来源：data/applications.md</p>
+                <h2>申请追踪</h2>
+                <p>按 career-ops Tracker 的真实状态展示；不存在时显示新工作区空态。</p>
+              </div>
+            </div>
+            <div class="status-chips" id="tracker-statuses"></div>
+            <div class="table-shell">
+              <table>
+                <thead><tr><th>#</th><th>公司与岗位</th><th>评分</th><th>状态</th><th>日期</th><th>PDF</th></tr></thead>
+                <tbody id="tracker-body"></tbody>
+              </table>
+              <div class="empty-state hidden" id="tracker-empty">
+                <span>▦</span>
+                <h3>还没有申请记录</h3>
+                <p>career-ops 尚未创建 data/applications.md，或 Tracker 目前为空。</p>
+              </div>
+            </div>
+            <div class="lifecycle-grid">
+              <section class="lifecycle-card">
+                <p class="eyebrow">career-ops · set-status.mjs</p>
+                <h3>更新申请状态</h3>
+                <p>状态变更会调用 career-ops 的锁定、验证和原子写入流程。</p>
+                <form id="tracker-status-form" class="compact-form">
+                  <label><span>Tracker 行</span><select id="tracker-status-row"></select></label>
+                  <label><span>新状态</span><select id="tracker-status-value">
+                    <option>Evaluated</option><option>Applied</option><option>Responded</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>Discarded</option><option>SKIP</option>
+                  </select></label>
+                  <label><span>发生日期（可选）</span><input id="tracker-status-date" type="date" /></label>
+                  <label class="wide"><span>备注（可选）</span><input id="tracker-status-note" maxlength="1000" placeholder="追加到 Tracker Notes" /></label>
+                  <button class="primary-button wide" type="submit">确认更新状态</button>
+                </form>
+                <button class="text-button" id="seed-followup-button" type="button">为所选申请建立跟进提醒</button>
+              </section>
+              <section class="lifecycle-card">
+                <p class="eyebrow">career-ops · followup-cadence.mjs</p>
+                <h3>跟进节奏</h3>
+                <p>根据真实 Tracker 和 follow-ups.md 计算；不会发送邮件。</p>
+                <button class="secondary-button" id="refresh-followups-button" type="button">刷新跟进建议</button>
+                <pre class="lifecycle-output" id="followup-output">尚未读取跟进节奏。</pre>
+              </section>
+              <section class="lifecycle-card">
+                <p class="eyebrow">career-ops · reply-matcher.mjs</p>
+                <h3>粘贴招聘回复</h3>
+                <p>先追加至候选队列，再由 career-ops 分类和匹配；不会自动改状态。</p>
+                <form id="reply-analysis-form" class="compact-form">
+                  <label><span>发件人</span><input id="reply-from" type="text" maxlength="320" placeholder="recruiter@company.com" /></label>
+                  <label><span>主题</span><input id="reply-subject" type="text" maxlength="500" /></label>
+                  <label class="wide"><span>正文</span><textarea id="reply-body" rows="5" maxlength="20000"></textarea></label>
+                  <button class="secondary-button wide" type="submit">分析回复</button>
+                </form>
+                <div class="lifecycle-result" id="reply-result">等待粘贴邮件。</div>
+                <button class="primary-button hidden" id="apply-reply-suggestion-button" type="button">确认应用建议状态</button>
+              </section>
+              <section class="lifecycle-card">
+                <p class="eyebrow">career-ops · invite-match.mjs / outcome.mjs</p>
+                <h3>面试与结果归档</h3>
+                <textarea id="invite-text" rows="4" maxlength="20000" placeholder="粘贴面试邀请，查找对应 Tracker 条目"></textarea>
+                <button class="secondary-button" id="match-invite-button" type="button">匹配面试邀请</button>
+                <div class="lifecycle-result" id="invite-result">尚未匹配邀请。</div>
+                <form id="outcome-form" class="compact-form">
+                  <label><span>Tracker 行</span><select id="outcome-row"></select></label>
+                  <label><span>结果</span><select id="outcome-type"><option value="interview_progress">面试推进</option><option value="offer_received">收到 Offer</option><option value="hired">接受 Offer / 入职</option><option value="offer_declined">婉拒 Offer</option><option value="rejected">被拒绝</option><option value="no_response">无回复</option><option value="interview_only">面试流程结束</option></select></label>
+                  <label><span>阶段（可选）</span><input id="outcome-stage" maxlength="200" placeholder="例如 Final Round" /></label>
+                  <label class="wide"><span>反馈或备注（可选）</span><textarea id="outcome-feedback" rows="3" maxlength="5000"></textarea></label>
+                  <button class="danger-button wide" type="submit">确认归档结果</button>
+                </form>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="reports-view">
+            <div class="section-intro">
+              <div>
+                <p class="eyebrow">来源：reports/</p>
+                <h2>评估报告</h2>
+                <p>选择报告后只读加载 Markdown 原文，不运行评估或生成 PDF。</p>
+              </div>
+            </div>
+            <div class="reports-layout">
+              <aside class="report-list" id="report-list"></aside>
+              <article class="document-reader report-reader">
+                <div class="report-placeholder" id="report-placeholder">
+                  <span>≡</span>
+                  <h3>选择一份报告</h3>
+                  <p>报告内容将在这里以只读方式显示。</p>
+                </div>
+                <pre class="hidden" id="report-document"></pre>
+              </article>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/renderer.ts"></script>
+  </body>
+</html>
