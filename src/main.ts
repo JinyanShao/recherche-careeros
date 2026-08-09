@@ -14,7 +14,7 @@ import path from 'node:path';
 import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import started from 'electron-squirrel-startup';
-import { loadCareerOpsSnapshot, readReport } from './career-ops-reader';
+import { loadCareerOpsSnapshot, readReport, validateCareerOpsRoot } from './career-ops-reader';
 import {
   RevisionConflictError,
   confirmPositioning,
@@ -96,7 +96,7 @@ import type {
   TrackerStatusChangeRequest,
 } from './contracts';
 
-const DEFAULT_CAREER_OPS_ROOT = '/Users/jinyanshao/Developer/ThirdParty-克隆的第三方项目/career-ops';
+const DEFAULT_CAREER_OPS_ROOT = '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
 const CHANNELS = {
   getSnapshot: 'career-ops:get-snapshot',
   selectDirectory: 'career-ops:select-directory',
@@ -256,9 +256,9 @@ function registerCareerOpsIpc(): void {
     assertTrustedSender(event);
     if (!mainWindow) return { cancelled: true, snapshot: null };
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Choose your career-ops folder',
-      message: 'Select the folder that contains cv.md, config/profile.yml, and data/pipeline.md.',
-      buttonLabel: 'Use this folder',
+      title: '连接现有求职资料',
+      message: '选择你此前使用的 Recherche CareerOS 或 career-ops 资料文件夹。',
+      buttonLabel: '连接资料',
       defaultPath: careerOpsRoot,
       properties: ['openDirectory'],
     });
@@ -276,7 +276,9 @@ function registerCareerOpsIpc(): void {
   ipcMain.handle(CHANNELS.readReport, (event, name: unknown) => {
     assertTrustedSender(event);
     if (typeof name !== 'string') throw new Error('Invalid report request.');
-    return readReport(careerOpsRoot, name);
+    const validation = validateCareerOpsRoot(careerOpsRoot);
+    if (!validation.valid) throw new Error('The career-ops workspace is not valid.');
+    return readReport(validation.root, name);
   });
 
   ipcMain.handle(CHANNELS.saveProfile, async (event, request: unknown): Promise<SaveResult> => {

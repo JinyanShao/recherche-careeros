@@ -72,7 +72,7 @@ export async function updateTrackerStatus(root: string, request: TrackerStatusCh
   if (result.code !== 0) scriptFailure('set-status.mjs', result.stdout, result.stderr, result.code);
   return {
     ok: true,
-    message: `已通过 career-ops 更新 #${rowNumber} 状态。`,
+    message: `申请 #${rowNumber} 的状态已更新。`,
     detail: parseJson<Record<string, unknown>>(result.stdout, 'set-status.mjs'),
     snapshot: loadCareerOpsSnapshot(root),
   };
@@ -83,7 +83,7 @@ export async function seedFollowup(root: string, rowNumber: string): Promise<Tra
   if (result.code !== 0) scriptFailure('followup-seed.mjs', result.stdout, result.stderr, result.code);
   return {
     ok: true,
-    message: `已通过 career-ops 为 #${rowNumber} 建立跟进提醒。`,
+    message: `已为申请 #${rowNumber} 建立跟进提醒。`,
     detail: parseJson<Record<string, unknown>>(result.stdout, 'followup-seed.mjs'),
     snapshot: loadCareerOpsSnapshot(root),
   };
@@ -164,7 +164,7 @@ export async function recordOutcome(root: string, request: OutcomeRequest): Prom
   if (result.code !== 0) scriptFailure('outcome.mjs', result.stdout, result.stderr, result.code);
   return {
     ok: true,
-    message: `已通过 career-ops 归档 #${request.rowNumber} 的结果。`,
+    message: `申请 #${request.rowNumber} 的结果已归档。`,
     detail: parseJson<Record<string, unknown>>(result.stdout, 'outcome.mjs'),
     snapshot: loadCareerOpsSnapshot(root),
   };

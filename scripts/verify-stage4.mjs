@@ -117,6 +117,7 @@ fact_verification:
 
 await Promise.all([
   writeFile(path.join(fixtureRoot, 'AGENTS.md'), '# Fixture career-ops\n'),
+  writeFile(path.join(fixtureRoot, 'package.json'), '{"name":"career-ops-stage4-fixture","private":true}\n'),
   writeFile(path.join(fixtureRoot, 'scan.mjs'), 'export {};\n'),
   writeFile(path.join(fixtureRoot, 'reserve-report-num.mjs'), reserveShim),
   writeFile(path.join(fixtureRoot, 'merge-tracker.mjs'), mergeShim),
@@ -207,6 +208,12 @@ await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const address = server.address();
 assert.ok(address && typeof address === 'object');
 const baseUrl = `http://127.0.0.1:${address.port}`;
+await writeFile(path.join(fixtureRoot, 'data/pipeline.md'), `# Pipeline
+
+## Pending
+
+- [ ] ${baseUrl}/job | Fixture Labs | Junior Backend Engineer | Fribourg, Switzerland | posted:2026-08-01 | trust:95
+`);
 await writeFile(path.join(electronData, 'ai-provider-settings.json'), JSON.stringify({
   version: 1,
   provider: 'openai-compatible',
@@ -232,7 +239,8 @@ try {
   const page = await app.firstWindow();
   page.setDefaultTimeout(30_000);
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent === 'Fixture Candidate');
-  await page.locator('.nav-item[data-view="evaluation"]').click();
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-evaluate"]').click();
   await page.waitForSelector('#model-provider');
   const migratedSettings = await page.evaluate(() => window.careerOps.getAiSettings());
   assert.equal(migratedSettings.services.length, 1);
@@ -272,7 +280,13 @@ try {
   await page.getByRole('button', { name: 'JD 文本' }).click();
   await page.locator('#job-jd-input').fill(jd);
   await page.getByRole('button', { name: '开始完整评估' }).click();
-  await page.waitForFunction(() => !document.querySelector('#evaluation-result')?.classList.contains('hidden'));
+  await page.waitForFunction(() => (
+    !document.querySelector('#evaluation-result')?.classList.contains('hidden')
+    || !document.querySelector('#evaluation-error')?.classList.contains('hidden')
+  ));
+  if (await page.locator('#evaluation-error').isVisible()) {
+    throw new Error(`JD evaluation failed: ${(await page.locator('#evaluation-error').textContent())?.trim()}`);
+  }
   assert.equal(await page.locator('#job-evaluation-score').textContent(), '4.2');
   assert.equal(await page.locator('#job-legitimacy-tier').textContent(), 'Proceed with Caution');
   assert.equal(await page.locator('#job-cost').textContent(), '$0.002000');
@@ -285,7 +299,16 @@ try {
   await page.waitForFunction(() => document.querySelector('#job-report-number')?.textContent === '002');
   assert.equal(await page.locator('#job-liveness-status').textContent(), 'active');
   assert.equal(await page.locator('#job-legitimacy-tier').textContent(), 'High Confidence');
-  assert.equal(await page.locator('#job-tracker-status').textContent(), 'Tracker 已登记');
+  assert.equal(await page.locator('#job-tracker-status').textContent(), '申请记录已登记');
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-inbox"]').click();
+  await page.locator('#job-workbench-content').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => document.querySelector('#workbench-report-state')?.textContent === '已完成');
+  assert.equal((await page.locator('#workbench-primary-action').textContent())?.trim(), '准备申请材料');
+  assert.equal((await page.locator('#workbench-tracker-status').textContent())?.trim(), 'Evaluated');
+  assert.equal(await page.locator('#workbench-report-button').isVisible(), true);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.locator('[data-route="jobs-evaluate"]').click();
   await page.screenshot({ path: path.join(projectRoot, 'stage-4-evaluation-result.png') });
   const horizontalOverflow = await page.locator('#evaluation-result').evaluate((root) => (
     [...root.querySelectorAll('.evaluation-verdict-band, .evaluation-run-metrics, .evaluation-block-row, .evaluation-bottom-grid > section')]
@@ -315,7 +338,8 @@ try {
   assert.equal((tracker.match(/Fixture Labs/g) ?? []).length, 2);
 
   await page.setViewportSize({ width: 1040, height: 720 });
-  await page.locator('.nav-item[data-view="evaluation"]').click();
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-evaluate"]').click();
   const settingsOverflow = await page.locator('.model-settings-pane').evaluate((root) => (
     [...root.querySelectorAll('.model-settings-grid, .model-settings-actions, .model-picker-line, .secret-input, .model-quick-presets')]
       .filter((node) => node.scrollWidth > node.clientWidth + 1)

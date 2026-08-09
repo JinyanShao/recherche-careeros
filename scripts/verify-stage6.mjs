@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process';
 import {
   appendFile,
   chmod,
+  cp,
   mkdir,
   mkdtemp,
   readFile,
@@ -18,6 +19,8 @@ import { promisify } from 'node:util';
 import { _electron as electron } from 'playwright';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
+const careerOpsSource = process.env.RECHERCHE_CAREER_OPS_SOURCE
+  || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage6-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const launchAgents = path.join(fixtureRoot, 'LaunchAgents');
@@ -25,8 +28,8 @@ const launchctlLog = path.join(fixtureRoot, 'launchctl.log');
 const notificationLog = path.join(fixtureRoot, 'notifications.jsonl');
 const requestLog = path.join(fixtureRoot, 'requests.log');
 const launchctlShim = path.join(fixtureRoot, 'launchctl-shim');
-const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const packagedExecutable = path.join(projectRoot, 'out/Recherche CareerOS-darwin-arm64/Recherche CareerOS.app/Contents/MacOS/Recherche CareerOS');
+const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const nodeExecutable = '/Users/jinyanshao/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node';
 const execFileAsync = promisify(execFile);
 await stat(packagedExecutable);
@@ -76,6 +79,7 @@ Python, FastAPI, SQL, REST APIs, AWS, Git
 const profile = `candidate:\n  full_name: Fixture Candidate\n  location: Switzerland\ntarget_roles:\n  primary: [Backend Engineer]\nlocation:\n  country: Switzerland\nlanguage:\n  output: en\nspend_tier: standard\n`;
 
 await Promise.all([
+  cp(path.join(careerOpsSource, 'package.json'), path.join(fixtureRoot, 'package.json')),
   writeFile(path.join(fixtureRoot, 'AGENTS.md'), '# Fixture career-ops\n'),
   writeFile(path.join(fixtureRoot, 'scan.mjs'), 'export {};\n'),
   writeFile(path.join(fixtureRoot, 'reserve-report-num.mjs'), reserveShim),
@@ -181,7 +185,8 @@ try {
     inputPricePerMillion: 1, outputPricePerMillion: 2, clearKey: false,
   }), baseUrl);
 
-  await page.locator('.nav-item[data-view="automation"]').click();
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-batch"]').click();
   await page.waitForFunction(() => document.querySelectorAll('#batch-jobs-body tr').length === 3);
   assert.equal(await page.locator('#batch-jobs-body tr').count(), 3);
   await page.locator('#batch-concurrency').fill('2');
@@ -200,6 +205,8 @@ try {
   assert.ok(notifications.every((item) => item.score === 4.4));
   await page.screenshot({ path: path.join(projectRoot, 'stage-6-batch-complete.png'), fullPage: true });
 
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await page.locator('[data-route="settings-automation"]').click();
   await page.locator('#schedule-enabled').check();
   await page.locator('#schedule-hour').fill('8');
   await page.locator('#schedule-minute').fill('30');
@@ -222,6 +229,8 @@ try {
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('其他进程修改'));
 
   await appendFile(path.join(fixtureRoot, 'data/pipeline.md'), `\n- [ ] ${baseUrl}/job/4 | Fixture Labs 4 | Batch Role 4 | Switzerland\n- [ ] ${baseUrl}/job/5 | Fixture Labs 5 | Batch Role 5 | Switzerland\n`);
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-batch"]').click();
   await page.getByRole('button', { name: '重新读取任务' }).click();
   await page.waitForFunction(() => document.querySelector('#batch-pending-count')?.textContent === '2');
   await page.locator('#batch-concurrency').fill('1');
@@ -240,8 +249,9 @@ try {
   await appendFile(path.join(fixtureRoot, 'data/pipeline.md'), `\n- [ ] ${baseUrl}/job/6 | Fixture Labs 6 | Batch Role 6 | Switzerland\n`);
   await app.close();
   appClosed = true;
-  const headless = await execFileAsync(packagedExecutable, [
-    '--recherche-daily-batch', '--career-ops-root', fixtureRoot, `--user-data-dir=${electronData}`,
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
+  const headless = await execFileAsync(electronExecutable, [
+    projectRoot, '--recherche-daily-batch', '--career-ops-root', fixtureRoot, `--user-data-dir=${electronData}`,
   ], {
     env: {
       ...process.env,
@@ -259,7 +269,7 @@ try {
   console.log(JSON.stringify({
     fixtureRoot, concurrentWorkers: modelMaxActive, transientRetryAttempts: modelAttempts.get('2'),
     cancellationAndResume: true, launchAgentInstalled: true, scheduleConflictRejected: true,
-    highScoreNotifications: notifications.length, packagedHeadlessRun: true,
+    highScoreNotifications: notifications.length, headlessRun: true,
   }, null, 2));
 } finally {
   if (!appClosed) await app.close();

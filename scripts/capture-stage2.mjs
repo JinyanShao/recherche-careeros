@@ -23,7 +23,8 @@ const app = await electron.launch({
   ],
   env: {
     ...process.env,
-    CAREER_OPS_ROOT: '/Users/jinyanshao/Developer/ThirdParty-克隆的第三方项目/career-ops',
+    CAREER_OPS_ROOT: process.env.RECHERCHE_CAREER_OPS_SOURCE
+      || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops',
   },
 });
 
@@ -31,16 +32,21 @@ try {
   const page = await app.firstWindow();
   page.setDefaultTimeout(15_000);
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent === 'Jinyan Shao');
-  await page.locator('.nav-item[data-view="profile"]').click();
+  await page.locator('.nav-item[data-section="profile"]').click();
   await page.waitForSelector('#verification-list .verification-row');
   await page.screenshot({
     path: path.join(projectRoot, 'stage-2-profile-editor.png'),
   });
-  await page.locator('.verification-card').scrollIntoViewIfNeeded();
+  await page.locator('.verification-card').evaluate((node) => node.scrollIntoView({ block: 'start' }));
   await page.screenshot({
     path: path.join(projectRoot, 'stage-2-verification-ledger.png'),
   });
-  console.log('Captured stage-2-profile-editor.png and stage-2-verification-ledger.png');
+  await page.setViewportSize({ width: 1040, height: 720 });
+  await page.locator('.verification-card').evaluate((node) => node.scrollIntoView({ block: 'start' }));
+  await page.screenshot({
+    path: path.join(projectRoot, 'stage-2-verification-ledger-1040.png'),
+  });
+  console.log('Captured stage-2 profile and verification views at desktop and minimum window sizes');
 } finally {
   await app.close();
 }

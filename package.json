@@ -50,7 +50,10 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@awesome.me/webawesome": "^3.11.0",
+    "@milkdown/crepe": "^7.21.3",
     "electron-squirrel-startup": "^1.0.1",
+    "lucide": "^1.28.0",
     "write-file-atomic": "^8.0.0",
     "yaml": "^2.9.0"
   }

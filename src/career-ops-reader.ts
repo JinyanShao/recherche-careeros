@@ -165,7 +165,7 @@ export function validateCareerOpsRoot(inputRoot: string): CareerOpsValidation {
         root,
         valid: false,
         checks: REQUIRED_MARKERS.map((marker) => ({ ...marker, present: false })),
-        warnings: ['The selected path is not an accessible directory.'],
+        warnings: ['所选位置不是可读取的资料文件夹。'],
       };
     }
     root = realpathSync(root);
@@ -174,17 +174,17 @@ export function validateCareerOpsRoot(inputRoot: string): CareerOpsValidation {
       root,
       valid: false,
       checks: REQUIRED_MARKERS.map((marker) => ({ ...marker, present: false })),
-      warnings: ['The selected directory could not be resolved.'],
+      warnings: ['无法读取所选资料文件夹。'],
     };
   }
 
   const checks = REQUIRED_MARKERS.map((marker) => checkMarker(root, marker));
   const missingOptional = checks.filter((check) => !check.required && !check.present);
   if (missingOptional.some((check) => check.id === 'tracker')) {
-    warnings.push('No application tracker exists yet. This is valid for a new career-ops workspace.');
+    warnings.push('还没有申请记录；完成第一次投递后会自动显示。');
   }
   if (missingOptional.some((check) => check.id === 'reports')) {
-    warnings.push('No reports directory exists yet.');
+    warnings.push('还没有岗位报告；完成第一次岗位评估后会自动显示。');
   }
   return {
     root,

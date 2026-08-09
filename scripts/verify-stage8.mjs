@@ -5,7 +5,8 @@ import path from 'node:path';
 import { _electron as electron } from 'playwright';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
-const careerOpsSource = '/Users/jinyanshao/Developer/ThirdParty-克隆的第三方项目/career-ops';
+const careerOpsSource = process.env.RECHERCHE_CAREER_OPS_SOURCE
+  || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage8-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
@@ -74,10 +75,18 @@ try {
   const outcome = await page.evaluate(() => window.careerOps.recordOutcome({ rowNumber: '1', outcomeType: 'offer_received', stage: 'Written offer', feedback: 'Offer received and saved for review.' }));
   assert.equal(outcome.snapshot.tracker.applications[0].status, 'Offer');
 
-  await page.locator('.nav-item[data-view="tracker"]').click();
+  await page.locator('.nav-item[data-section="applications"]').click();
   await page.waitForSelector('.lifecycle-grid');
+  await page.locator('#tracker-status-row').selectOption('1');
+  await page.locator('#tracker-status-value').selectOption('Offer');
+  await page.getByRole('button', { name: '确认更新状态' }).click();
+  const confirmation = page.locator('#confirmation-dialog');
+  await page.waitForFunction(() => document.querySelector('#confirmation-dialog')?.hasAttribute('open'));
+  assert.equal(await confirmation.getAttribute('label'), '更新申请状态');
+  await page.getByRole('button', { name: '确认更新', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('状态已更新'));
   await page.screenshot({ path: path.join(projectRoot, 'stage-8-tracker-lifecycle.png'), fullPage: true });
-  console.log(JSON.stringify({ fixtureRoot, statusUpdate: true, followupSeed: true, replySuggestionOnly: true, inviteMatch: true, outcomeArchive: true }));
+  console.log(JSON.stringify({ fixtureRoot, statusUpdate: true, followupSeed: true, replySuggestionOnly: true, inviteMatch: true, outcomeArchive: true, confirmationDialog: true }));
 } finally {
   await app.close();
   await rm(fixtureRoot, { recursive: true, force: true });

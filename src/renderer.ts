@@ -1,4 +1,31 @@
 import './index.css';
+import { Crepe, CrepeFeature } from '@milkdown/crepe';
+import '@awesome.me/webawesome/dist/components/callout/callout.js';
+import '@awesome.me/webawesome/dist/components/button/button.js';
+import '@awesome.me/webawesome/dist/components/dialog/dialog.js';
+import '@awesome.me/webawesome/dist/components/progress-bar/progress-bar.js';
+import '@awesome.me/webawesome/dist/components/tooltip/tooltip.js';
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  ClipboardList,
+  Eye,
+  FileText,
+  Files,
+  History,
+  House,
+  Inbox,
+  ListRestart,
+  Minus,
+  Radar,
+  RefreshCw,
+  Settings,
+  TriangleAlert,
+  UserRound,
+  X,
+  createIcons,
+} from 'lucide';
 import type {
   AiSettings,
   AiServicePreset,
@@ -36,21 +63,101 @@ import type {
 } from './contracts';
 
 type ViewName = 'overview' | 'cv' | 'profile' | 'analysis' | 'evaluation' | 'ats' | 'automation' | 'materials' | 'pipeline' | 'tracker' | 'reports';
+type NavigationSection = 'today' | 'jobs' | 'applications' | 'profile' | 'settings';
+type NavigationRoute = {
+  id: string;
+  label: string;
+  section: NavigationSection;
+  view: ViewName;
+  target?: 'jobs' | 'models' | 'sources' | 'schedule' | 'advanced';
+};
 type PipelineFilter = 'pending' | 'processed' | 'all';
 type AdviceFilter = 'all' | 'CV' | 'LinkedIn' | 'GitHub' | 'Portfolio';
+type VerificationFilter = 'attention' | 'verified' | 'all';
+type GuidedAction = 'connect' | 'profile-details' | 'profile-cv' | 'settings-models';
+type WorkbenchAction = 'evaluate' | 'prepare-materials' | 'mark-applied' | 'view-tracker' | 'view-materials';
+type ConfirmationTone = 'brand' | 'danger';
+type WebAwesomeDialog = HTMLElement & { open: boolean };
+type WebAwesomeProgressBar = HTMLElement & { value: number };
 
 const VIEW_META: Record<ViewName, { eyebrow: string; title: string }> = {
   overview: { eyebrow: '工作区状态', title: '今天的求职资料' },
-  cv: { eyebrow: '简历事实来源', title: 'CV 原始资料' },
-  profile: { eyebrow: '候选人配置', title: '个人资料与求职方向' },
-  analysis: { eyebrow: '阶段 3', title: '竞争力与市场分析' },
-  evaluation: { eyebrow: '阶段 4', title: '单岗位完整评估' },
-  ats: { eyebrow: '阶段 5', title: 'ATS 扫描与岗位中心' },
-  automation: { eyebrow: '阶段 6', title: '批量评分与每日自动化' },
-  materials: { eyebrow: '阶段 7', title: '申请材料与版本管理' },
-  pipeline: { eyebrow: '岗位数据', title: 'career-ops 收件箱' },
+  cv: { eyebrow: '我的资料', title: '简历' },
+  profile: { eyebrow: '我的资料', title: '个人资料与求职方向' },
+  analysis: { eyebrow: '市场定位', title: '竞争力与市场分析' },
+  evaluation: { eyebrow: '岗位判断', title: '单岗位完整评估' },
+  ats: { eyebrow: '岗位来源', title: '岗位发现中心' },
+  automation: { eyebrow: '每日求职', title: '批量评分与自动化' },
+  materials: { eyebrow: '申请准备', title: '申请材料与版本管理' },
+  pipeline: { eyebrow: '岗位', title: '岗位收件箱' },
   tracker: { eyebrow: '申请状态', title: '申请追踪' },
   reports: { eyebrow: '评估产物', title: '岗位评估报告' },
+};
+
+const NAVIGATION: Record<NavigationSection, NavigationRoute[]> = {
+  today: [{ id: 'today', label: '今天', section: 'today', view: 'overview' }],
+  jobs: [
+    { id: 'jobs-inbox', label: '收件箱', section: 'jobs', view: 'pipeline' },
+    { id: 'jobs-discover', label: '发现', section: 'jobs', view: 'ats', target: 'jobs' },
+    { id: 'jobs-evaluate', label: '评估岗位', section: 'jobs', view: 'evaluation' },
+    { id: 'jobs-batch', label: '批量处理', section: 'jobs', view: 'automation' },
+    { id: 'jobs-reports', label: '报告', section: 'jobs', view: 'reports' },
+  ],
+  applications: [
+    { id: 'applications-tracker', label: '申请进度', section: 'applications', view: 'tracker' },
+    { id: 'applications-materials', label: '申请材料', section: 'applications', view: 'materials' },
+  ],
+  profile: [
+    { id: 'profile-details', label: '个人资料', section: 'profile', view: 'profile' },
+    { id: 'profile-cv', label: '简历', section: 'profile', view: 'cv' },
+    { id: 'profile-analysis', label: '竞争力', section: 'profile', view: 'analysis' },
+  ],
+  settings: [
+    { id: 'settings-models', label: '模型与 API Key', section: 'settings', view: 'evaluation', target: 'models' },
+    { id: 'settings-sources', label: '职位来源', section: 'settings', view: 'ats', target: 'sources' },
+    { id: 'settings-automation', label: '自动化', section: 'settings', view: 'automation', target: 'schedule' },
+    { id: 'settings-advanced', label: '高级', section: 'settings', view: 'automation', target: 'advanced' },
+  ],
+};
+
+const ROUTE_META: Record<string, { eyebrow: string; title: string }> = {
+  today: { eyebrow: '今天', title: '下一步该做什么' },
+  'jobs-discover': { eyebrow: '岗位', title: '发现岗位' },
+  'jobs-inbox': { eyebrow: '岗位', title: '岗位收件箱' },
+  'jobs-evaluate': { eyebrow: '岗位', title: '评估一个岗位' },
+  'jobs-batch': { eyebrow: '岗位', title: '批量处理' },
+  'jobs-reports': { eyebrow: '岗位', title: '岗位报告' },
+  'applications-tracker': { eyebrow: '申请', title: '申请进度' },
+  'applications-materials': { eyebrow: '申请', title: '申请材料' },
+  'profile-details': { eyebrow: '我的资料', title: '个人资料与求职方向' },
+  'profile-cv': { eyebrow: '我的资料', title: '简历' },
+  'profile-analysis': { eyebrow: '我的资料', title: '竞争力与职业定位' },
+  'settings-models': { eyebrow: '设置', title: '模型与 API Key' },
+  'settings-sources': { eyebrow: '设置', title: '职位来源与过滤' },
+  'settings-automation': { eyebrow: '设置', title: '每日自动化' },
+  'settings-advanced': { eyebrow: '设置', title: '批量任务与高级控制' },
+};
+
+const DEFAULT_ROUTE: Record<NavigationSection, string> = {
+  today: 'today',
+  jobs: 'jobs-inbox',
+  applications: 'applications-tracker',
+  profile: 'profile-details',
+  settings: 'settings-models',
+};
+
+const DEFAULT_VIEW_ROUTE: Record<ViewName, string> = {
+  overview: 'today',
+  cv: 'profile-cv',
+  profile: 'profile-details',
+  analysis: 'profile-analysis',
+  evaluation: 'jobs-evaluate',
+  ats: 'jobs-discover',
+  automation: 'jobs-batch',
+  materials: 'applications-materials',
+  pipeline: 'jobs-inbox',
+  tracker: 'applications-tracker',
+  reports: 'jobs-reports',
 };
 
 let snapshot: CareerOpsSnapshot | null = null;
@@ -59,7 +166,13 @@ let pipelineQuery = '';
 let activeReport = '';
 let profileDirty = false;
 let cvDirty = false;
+let cvEditor: Crepe | null = null;
+let cvEditorBaseline = '';
+let cvEditorRenderId = 0;
 let verificationDraft: VerificationItem[] = [];
+let verificationFilter: VerificationFilter = 'attention';
+const selectedVerificationIds = new Set<string>();
+const expandedVerificationIds = new Set<string>();
 let currentAnalysis: CompetitivenessAnalysis | null = null;
 let adviceFilter: AdviceFilter = 'all';
 let jobInputKind: JobInputKind = 'url';
@@ -76,6 +189,19 @@ let activeMaterialVersion: ApplicationMaterialVersion | null = null;
 let activeMaterialTab: 'artifacts' | 'cover' | 'email' | 'linkedin' = 'artifacts';
 let currentAiSettings: AiSettings | null = null;
 let currentReplyRecommendation: ReplyRecommendation | null = null;
+let currentProfileNextRoute = 'profile-details';
+let currentProfileNextTarget: 'verification' | null = null;
+let currentJobsNextRoute = 'jobs-inbox';
+let currentApplicationsNextRoute = 'applications-tracker';
+let currentTodayNextRoute = 'jobs-discover';
+let currentTodayChoosesFolder = false;
+let selectedJobId = '';
+let currentWorkbenchAction: WorkbenchAction = 'evaluate';
+let currentWorkbenchReportName = '';
+let currentWorkbenchTrackerRow = '';
+let guidedSetupDismissed = false;
+let currentGuidedAction: GuidedAction = 'connect';
+let currentGuidedVerificationTarget = false;
 
 const MODEL_PRESETS: Record<AiServicePreset, {
   name: string;
@@ -101,6 +227,41 @@ const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
   unverified: '未验证',
   needs_review: '待复核',
 };
+
+const VALIDATION_LABELS: Record<string, string> = {
+  agent: '系统完整性',
+  scanner: '岗位搜索能力',
+  cv: '简历',
+  profile: '个人资料',
+  pipeline: '岗位收件箱',
+  tracker: '申请记录',
+  reports: '岗位报告',
+};
+
+const ICONS = {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  ClipboardList,
+  Eye,
+  FileText,
+  Files,
+  History,
+  House,
+  Inbox,
+  ListRestart,
+  Minus,
+  Radar,
+  RefreshCw,
+  Settings,
+  TriangleAlert,
+  UserRound,
+  X,
+};
+
+function renderIcons(): void {
+  createIcons({ icons: ICONS, attrs: { 'aria-hidden': 'true' } });
+}
 
 function element<T extends HTMLElement>(selector: string): T {
   const found = document.querySelector<T>(selector);
@@ -154,20 +315,91 @@ function sourceHost(url: string): string {
   }
 }
 
+function verificationSourceLabel(source: string): string {
+  const normalized = source.toLowerCase();
+  if (!source) return '来源待补充';
+  if (normalized.includes('cv.md')) return '简历';
+  if (normalized.includes('config/profile.yml')) return '个人资料';
+  if (normalized.includes('github.com')) return 'GitHub';
+  if (/^https?:\/\//i.test(source)) return sourceHost(source);
+  if (normalized.includes('recherche')) return '已迁入资料';
+  return '已有来源记录';
+}
+
+const VERIFICATION_ITEM_LABELS: Record<string, string> = {
+  'identity.name': '姓名',
+  'identity.headline': '职业定位',
+  'identity.location': '当前地点',
+  'preference.target_roles': '目标岗位',
+  'language.french': '法语水平',
+  'language.chinese': '中文水平',
+  'language.english': '英语水平',
+  'education.heia_fr': 'HEIA-FR 录取或入学状态',
+  'work_authorization.switzerland': '瑞士工作许可',
+  'preference.compensation': '薪资期望',
+  'preference.work_arrangement': '远程、混合或现场偏好',
+  'preference.availability': '到岗时间',
+};
+
+const VERIFICATION_CATEGORY_LABELS: Record<string, string> = {
+  Identity: '个人信息',
+  'Job preferences': '求职偏好',
+  Languages: '语言',
+  Experience: '工作经历',
+  Projects: '项目',
+  Education: '教育经历',
+  Certifications: '证书',
+  Constraints: '申请条件',
+};
+
+function verificationItemLabel(item: VerificationItem): string {
+  return VERIFICATION_ITEM_LABELS[item.id] ?? item.label;
+}
+
+function verificationCategoryLabel(category: string): string {
+  return VERIFICATION_CATEGORY_LABELS[category] ?? category;
+}
+
 function cvSummary(markdown: string): string {
   const match = markdown.match(/^## Summary\s*\n+([\s\S]*?)(?=\n##\s|$)/im);
   return match?.[1]?.replace(/\s+/g, ' ').trim()
-    || 'cv.md 中尚未找到 Summary 段落。';
+    || '简历中尚未填写职业摘要。';
 }
 
 function showNotice(message: string, tone: 'info' | 'error' = 'info'): void {
   const notice = element('#notice');
   notice.textContent = message;
   notice.className = `notice ${tone}`;
+  notice.setAttribute('variant', tone === 'error' ? 'danger' : 'brand');
 }
 
 function hideNotice(): void {
   element('#notice').className = 'notice hidden';
+}
+
+let confirmationResolver: ((confirmed: boolean) => void) | null = null;
+
+function resolveConfirmation(confirmed: boolean): void {
+  const resolve = confirmationResolver;
+  confirmationResolver = null;
+  element<WebAwesomeDialog>('#confirmation-dialog').open = false;
+  resolve?.(confirmed);
+}
+
+function confirmAction(
+  message: string,
+  options: { title?: string; action?: string; tone?: ConfirmationTone } = {},
+): Promise<boolean> {
+  if (confirmationResolver) resolveConfirmation(false);
+  const dialog = element<WebAwesomeDialog>('#confirmation-dialog');
+  dialog.setAttribute('label', options.title ?? '确认操作');
+  setText('#confirmation-message', message);
+  setText('#confirmation-action', options.action ?? '确认');
+  element('#confirmation-action').setAttribute('variant', options.tone ?? 'brand');
+  return new Promise<boolean>((resolve) => {
+    confirmationResolver = resolve;
+    dialog.open = true;
+  });
 }
 
 function setInputValue(selector: string, value: string | number): void {
@@ -196,6 +428,7 @@ function setProfileDirty(dirty: boolean): void {
   state.textContent = dirty ? '有未保存修改' : '未修改';
   state.className = `save-state${dirty ? ' dirty' : ''}`;
   element<HTMLButtonElement>('#save-profile-button').disabled = !dirty;
+  element('#verification-save-reminder').classList.toggle('hidden', !dirty);
 }
 
 function setCvDirty(dirty: boolean): void {
@@ -214,39 +447,395 @@ function setPortalDirty(dirty: boolean): void {
   element<HTMLButtonElement>('#save-portals-button').disabled = !dirty;
 }
 
-function switchView(view: ViewName): void {
+function allNavigationRoutes(): NavigationRoute[] {
+  return Object.values(NAVIGATION).flat();
+}
+
+function renderContextNavigation(section: NavigationSection, activeRouteId: string): void {
+  const container = element('#context-navigation');
+  clear(container);
+  const routes = NAVIGATION[section];
+  container.classList.toggle('single-route', routes.length === 1);
+  routes.forEach((route) => {
+    const button = make('button', route.id === activeRouteId ? 'active' : '', route.label);
+    button.type = 'button';
+    button.dataset.route = route.id;
+    if (route.id === activeRouteId) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => activateRoute(route.id));
+    container.append(button);
+  });
+}
+
+function revealRouteTarget(route: NavigationRoute): void {
+  if (route.target === 'jobs') {
+    document.querySelector<HTMLButtonElement>('[data-ats-tab="jobs"]')?.click();
+  }
+  if (route.target === 'sources') {
+    const portalsTab = document.querySelector<HTMLButtonElement>('[data-ats-tab="portals"]');
+    portalsTab?.click();
+  }
+  const selector = route.target === 'models'
+    ? '#model-settings-form'
+    : route.target === 'sources'
+      ? '#ats-portals-panel'
+      : route.target === 'schedule'
+        ? '#daily-automation-form'
+        : route.target === 'advanced'
+          ? '#advanced-workspace-panel'
+          : null;
+  if (selector) {
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.scrollIntoView({ block: 'start' }));
+  }
+}
+
+function switchView(view: ViewName, section: NavigationSection, routeId: string): void {
   document.querySelectorAll<HTMLElement>('.view').forEach((node) => {
     node.classList.toggle('active', node.id === `${view}-view`);
   });
-  document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach((button) => {
-    button.classList.toggle('active', button.dataset.view === view);
+  document.querySelectorAll<HTMLButtonElement>('[data-section]').forEach((button) => {
+    const active = button.dataset.section === section;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
   });
-  setText('#view-eyebrow', VIEW_META[view].eyebrow);
-  setText('#view-title', VIEW_META[view].title);
+  document.body.dataset.navigationSection = section;
+  document.body.dataset.navigationRoute = routeId;
+  renderContextNavigation(section, routeId);
+  const routeMeta = ROUTE_META[routeId] ?? VIEW_META[view];
+  setText('#view-eyebrow', routeMeta.eyebrow);
+  setText('#view-title', routeMeta.title);
+}
+
+function activateRoute(routeId: string): void {
+  const route = allNavigationRoutes().find((candidate) => candidate.id === routeId);
+  if (!route) return;
+  switchView(route.view, route.section, route.id);
+  if (route.view === 'analysis' && !currentAnalysis) void loadAnalysis();
+  if (route.view === 'ats' && !atsWorkspace) void loadAtsWorkspaceView();
+  if (route.view === 'automation' && !automationWorkspace) void loadAutomationWorkspace();
+  if (route.view === 'materials' && !materialsWorkspace) void loadMaterialsWorkspace();
+  revealRouteTarget(route);
+}
+
+function navigateToView(view: ViewName): void {
+  activateRoute(DEFAULT_VIEW_ROUTE[view]);
+}
+
+function profilePreparationState(data: CareerOpsSnapshot): {
+  profileComplete: boolean;
+  cvComplete: boolean;
+  evidenceTotal: number;
+  evidenceVerified: number;
+  evidenceComplete: boolean;
+  analysisComplete: boolean;
+} {
+  const editor = data.profileWorkspace.editor;
+  const profileComplete = Boolean(
+    editor.fullName.trim()
+    && editor.headline.trim()
+    && editor.location.trim()
+    && editor.country.trim()
+    && editor.targetRoles.length
+    && editor.workArrangements.length
+    && editor.employmentTypes.length
+  );
+  const cvComplete = data.cv.exists && data.cv.content.trim().length > 0;
+  const evidenceTotal = data.profileWorkspace.verification.length;
+  const evidenceVerified = data.profileWorkspace.verification.filter((item) => item.status === 'verified').length;
+  const evidenceComplete = evidenceTotal > 0 && evidenceVerified === evidenceTotal;
+  return {
+    profileComplete,
+    cvComplete,
+    evidenceTotal,
+    evidenceVerified,
+    evidenceComplete,
+    analysisComplete: currentAnalysis !== null,
+  };
+}
+
+function setReadinessItem(id: 'profile' | 'cv' | 'evidence' | 'analysis', complete: boolean, label: string): void {
+  const item = element('[data-readiness-item="' + id + '"]');
+  item.classList.toggle('complete', complete);
+  item.classList.toggle('attention', !complete);
+  setText('#readiness-' + id + '-state', label);
+}
+
+function renderProfileReadiness(data: CareerOpsSnapshot): void {
+  const {
+    profileComplete,
+    cvComplete,
+    evidenceTotal,
+    evidenceVerified,
+    evidenceComplete,
+    analysisComplete,
+  } = profilePreparationState(data);
+  const completed = [profileComplete, cvComplete, evidenceComplete, analysisComplete].filter(Boolean).length;
+
+  setReadinessItem('profile', profileComplete, profileComplete ? '已就绪' : '需完善');
+  setReadinessItem('cv', cvComplete, cvComplete ? '已就绪' : '需补充');
+  setReadinessItem('evidence', evidenceComplete, evidenceTotal ? evidenceVerified + '/' + evidenceTotal : '待核对');
+  setReadinessItem('analysis', analysisComplete, currentAnalysis ? currentAnalysis.score + '/100' : '待分析');
+  setText('#profile-readiness-count', '资料准备 ' + completed + '/4');
+
+  if (!profileComplete) {
+    currentProfileNextRoute = 'profile-details';
+    currentProfileNextTarget = null;
+    setText('#profile-readiness-copy', '先补全职业定位、目标岗位和工作方式，让搜索条件保持准确。');
+    setText('#profile-next-step-button', '完善个人资料');
+  } else if (!cvComplete) {
+    currentProfileNextRoute = 'profile-cv';
+    currentProfileNextTarget = null;
+    setText('#profile-readiness-copy', '个人资料已就绪，下一步补充用于匹配和生成材料的简历。');
+    setText('#profile-next-step-button', '补充简历');
+  } else if (!evidenceComplete) {
+    currentProfileNextRoute = 'profile-details';
+    currentProfileNextTarget = 'verification';
+    setText('#profile-readiness-copy', '核对仍未确认的事实，避免评分和申请材料引用不可靠信息。');
+    setText('#profile-next-step-button', '核对事实');
+  } else {
+    currentProfileNextRoute = 'profile-analysis';
+    currentProfileNextTarget = null;
+    setText(
+      '#profile-readiness-copy',
+      analysisComplete ? '基础资料已经就绪，可以查看竞争力分解和下一步优化建议。' : '资料已经就绪，下一步查看竞争力和市场建议。',
+    );
+    setText('#profile-next-step-button', analysisComplete ? '查看优化建议' : '分析竞争力');
+  }
+}
+
+
+function renderGuidedSetup(data: CareerOpsSnapshot): void {
+  const panel = element('#guided-setup');
+  const {
+    profileComplete,
+    cvComplete,
+    evidenceComplete,
+  } = profilePreparationState(data);
+  const modelReady = Boolean(currentAiSettings?.keyConfigured);
+  const steps: Array<{
+    label: string;
+    detail: string;
+    complete: boolean;
+    action: GuidedAction;
+    verification?: boolean;
+  }> = [
+    { label: '连接资料', detail: '读取现有求职记录', complete: data.validation.valid, action: 'connect' },
+    { label: '个人资料与偏好', detail: '岗位、地点和工作方式', complete: profileComplete, action: 'profile-details' },
+    { label: '简历', detail: '用于匹配和申请材料', complete: cvComplete, action: 'profile-cv' },
+    { label: '事实核对', detail: '只让 AI 使用可靠信息', complete: evidenceComplete, action: 'profile-details', verification: true },
+    { label: 'AI 模型', detail: currentAiSettings ? '安全保存自己的 API Key' : '正在检查模型设置', complete: modelReady, action: 'settings-models' },
+  ];
+  const completeCount = steps.filter((step) => step.complete).length;
+  const ready = completeCount === steps.length;
+  panel.hidden = guidedSetupDismissed || ready;
+  if (panel.hidden) return;
+
+  setText('#guided-progress-label', completeCount + '/5 已完成');
+  element<HTMLElement>('#guided-progress-fill').style.width = Math.round((completeCount / steps.length) * 100) + '%';
+  const container = element('#guided-steps');
+  clear(container);
+  const nextStep = steps.find((step) => !step.complete) ?? steps[0];
+  steps.forEach((step, index) => {
+    const row = make('article', step.complete ? 'complete' : step === nextStep ? 'current' : '');
+    row.append(
+      make('i', '', step.complete ? '✓' : String(index + 1)),
+      make('strong', '', step.label),
+      make('span', '', step.complete ? '已就绪' : step.detail),
+    );
+    container.append(row);
+  });
+  currentGuidedAction = nextStep.action;
+  currentGuidedVerificationTarget = Boolean(nextStep.verification);
+  const labels: Record<GuidedAction, string> = {
+    connect: '连接现有资料',
+    'profile-details': nextStep.verification ? '核对事实' : '完善个人资料',
+    'profile-cv': '完善简历',
+    'settings-models': '配置模型',
+  };
+  setText('#guided-next-button', labels[nextStep.action]);
+}
+
+function renderJobsWorkflow(data: CareerOpsSnapshot): void {
+  const discovered = atsWorkspace?.totals.jobs ?? data.pipeline.total;
+  const pending = data.pipeline.pending;
+  const reports = data.reports.length;
+  setText('#jobs-flow-discovered', discovered);
+  setText('#jobs-flow-pending', pending);
+  setText('#jobs-flow-reports', reports);
+
+  if (pending > 0) {
+    currentJobsNextRoute = 'jobs-inbox';
+    setText('#jobs-flow-heading', pending + ' 个岗位等待评估');
+    setText('#jobs-flow-copy', '在收件箱选择一个岗位直接评估，或使用批量处理。');
+    setText('#jobs-next-step-button', '查看待评估岗位');
+  } else if (discovered === 0) {
+    currentJobsNextRoute = 'jobs-discover';
+    setText('#jobs-flow-heading', '还没有发现岗位');
+    setText('#jobs-flow-copy', '运行一次扫描，从已配置的招聘来源获取岗位。');
+    setText('#jobs-next-step-button', '发现岗位');
+  } else if (reports > 0) {
+    currentJobsNextRoute = 'jobs-reports';
+    setText('#jobs-flow-heading', reports + ' 份评估报告可查看');
+    setText('#jobs-flow-copy', '查看评分、证据与风险，再决定是否准备申请。');
+    setText('#jobs-next-step-button', '查看评估报告');
+  } else {
+    currentJobsNextRoute = 'jobs-discover';
+    setText('#jobs-flow-heading', '继续寻找合适岗位');
+    setText('#jobs-flow-copy', '当前收件箱已经处理完，可以获取最新岗位。');
+    setText('#jobs-next-step-button', '发现更多岗位');
+  }
+}
+
+function renderApplicationsWorkflow(data: CareerOpsSnapshot): void {
+  const materialVersions = materialsWorkspace?.versions.length ?? 0;
+  const trackerTotal = data.tracker.total;
+  const terminalStatuses = new Set(['Hired', 'Rejected', 'Discarded', 'SKIP']);
+  const activeApplications = data.tracker.applications.filter((application) => !terminalStatuses.has(application.status)).length;
+
+  setText('#application-flow-reports', data.reports.length);
+  setText('#application-flow-materials', materialVersions);
+  setText('#application-flow-tracker', trackerTotal);
+  setText('#application-flow-active', activeApplications);
+
+  if (trackerTotal > 0) {
+    currentApplicationsNextRoute = 'applications-tracker';
+    setText('#application-flow-heading', activeApplications > 0 ? activeApplications + ' 个申请正在推进' : '查看已归档的申请');
+    setText('#application-flow-copy', '更新状态、处理招聘回复，或查看下一次跟进建议。');
+    setText('#applications-next-step-button', activeApplications > 0 ? '继续推进申请' : '查看申请记录');
+  } else if (materialVersions > 0) {
+    currentApplicationsNextRoute = 'applications-materials';
+    setText('#application-flow-heading', materialVersions + ' 个材料版本已准备');
+    setText('#application-flow-copy', '检查最终文件；实际投递后在申请进度中继续更新状态。');
+    setText('#applications-next-step-button', '查看申请材料');
+  } else if (data.reports.length > 0) {
+    currentApplicationsNextRoute = 'applications-materials';
+    setText('#application-flow-heading', data.reports.length + ' 个岗位可以准备申请');
+    setText('#application-flow-copy', '选择已评估岗位，生成定制 CV、求职信和沟通草稿。');
+    setText('#applications-next-step-button', '准备申请材料');
+  } else {
+    currentApplicationsNextRoute = 'jobs-evaluate';
+    setText('#application-flow-heading', '先评估一个目标岗位');
+    setText('#application-flow-copy', '申请材料和进度都会从已核验的岗位报告开始。');
+    setText('#applications-next-step-button', '评估岗位');
+  }
+}
+
+function renderTodayFocus(data: CareerOpsSnapshot): void {
+  const {
+    profileComplete: profileReady,
+    cvComplete: cvReady,
+    evidenceComplete: evidenceReady,
+  } = profilePreparationState(data);
+  const activeStatuses = new Set(['Applied', 'Responded', 'Interview', 'Offer']);
+  const activeApplications = data.tracker.applications.filter((application) => activeStatuses.has(application.status)).length;
+  const materialVersions = materialsWorkspace?.versions.length ?? 0;
+
+  currentTodayChoosesFolder = false;
+  if (!data.validation.valid) {
+    currentTodayChoosesFolder = true;
+    setText('#today-focus-heading', '选择你的求职资料库');
+    setText('#today-focus-copy', '连接包含简历、个人资料和岗位数据的文件夹。');
+    setText('#today-focus-context', '不会修改所选文件夹的系统层');
+    setText('#today-next-step-button', '选择文件夹');
+    return;
+  }
+  if (activeApplications > 0) {
+    currentTodayNextRoute = 'applications-tracker';
+    setText('#today-focus-heading', activeApplications + ' 个申请需要继续推进');
+    setText('#today-focus-copy', '查看招聘回复、跟进时间或更新当前申请状态。');
+    setText('#today-focus-context', '优先处理已经投递的岗位');
+    setText('#today-next-step-button', '推进申请');
+    return;
+  }
+  if (!profileReady || !cvReady || !evidenceReady) {
+    currentTodayNextRoute = currentProfileNextRoute;
+    setText('#today-focus-heading', '先把求职资料准备完整');
+    setText('#today-focus-copy', element('#profile-readiness-copy').textContent || '完善岗位匹配需要的基础资料。');
+    setText('#today-focus-context', element('#profile-readiness-count').textContent || '资料准备中');
+    setText('#today-next-step-button', element('#profile-next-step-button').textContent || '继续准备资料');
+    return;
+  }
+  if (currentAiSettings && !currentAiSettings.keyConfigured) {
+    currentTodayNextRoute = 'settings-models';
+    setText('#today-focus-heading', '连接一个 AI 模型');
+    setText('#today-focus-copy', '岗位评分和申请材料需要模型服务；Key 只会加密保存在这台 Mac。');
+    setText('#today-focus-context', '支持 OpenAI、Anthropic、DeepSeek 和兼容服务');
+    setText('#today-next-step-button', '配置模型');
+    return;
+  }
+  const recommendations = recommendedJobs(data);
+  if (recommendations.length > 0) {
+    currentTodayNextRoute = 'jobs-inbox';
+    setText('#today-focus-heading', `${recommendations.length} 个岗位已完成评分`);
+    setText('#today-focus-copy', `今日推荐已按评分从高到低排列，先查看 ${recommendations[0].company} 的 ${recommendations[0].role}。`);
+    setText('#today-focus-context', '评分、公司信息和申请材料都在同一个岗位工作台');
+    setText('#today-next-step-button', '查看今日推荐');
+    return;
+  }
+  if (data.pipeline.pending > 0) {
+    currentTodayNextRoute = 'jobs-inbox';
+    setText('#today-focus-heading', data.pipeline.pending + ' 个新岗位等待评估');
+    setText('#today-focus-copy', '先看最符合目标的岗位，再决定是否生成完整报告。');
+    setText('#today-focus-context', '岗位来自已配置的招聘来源');
+    setText('#today-next-step-button', '查看新岗位');
+    return;
+  }
+  if (data.reports.length > materialVersions) {
+    currentTodayNextRoute = 'applications-materials';
+    setText('#today-focus-heading', '有已评估岗位可以准备申请');
+    setText('#today-focus-copy', '从岗位报告生成定制 CV、求职信和沟通草稿。');
+    setText('#today-focus-context', data.reports.length + ' 份报告 · ' + materialVersions + ' 个材料版本');
+    setText('#today-next-step-button', '准备申请材料');
+    return;
+  }
+  currentTodayNextRoute = 'jobs-discover';
+  setText('#today-focus-heading', '获取今天的新岗位');
+  setText('#today-focus-copy', '当前待处理任务已经完成，可以运行一次最新岗位扫描。');
+  setText('#today-focus-context', '使用现有职位来源与筛选条件');
+  setText('#today-next-step-button', '发现新岗位');
+}
+
+function prepareJobEvaluation(url: string): void {
+  if (!url.trim()) return;
+  const matchingJob = snapshot?.pipeline.jobs.find((job) => job.url === url);
+  if (matchingJob) selectedJobId = matchingJob.id;
+  setJobInputKind('url');
+  setInputValue('#job-url-input', url);
+  activateRoute('jobs-evaluate');
+  window.requestAnimationFrame(() => element<HTMLInputElement>('#job-url-input').focus());
 }
 
 function renderValidation(data: CareerOpsSnapshot): void {
   const { validation } = data;
-  setText('#sidebar-root', validation.root);
+  document.body.dataset.workspaceValid = String(validation.valid);
+  setText('#sidebar-root', validation.valid ? '资料已连接' : '尚未连接');
+  setText('#advanced-workspace-path', validation.root);
+  setText('#choose-folder-button', validation.valid ? '连接其他资料' : '连接现有资料');
   const ribbon = element('#validation-ribbon');
   ribbon.classList.toggle('invalid', !validation.valid);
-  setText('#validation-title', validation.valid ? '已连接真实 career-ops 工作区' : '所选文件夹不是有效工作区');
+  setText('#validation-title', validation.valid ? '求职资料库已连接' : '所选文件夹不是有效资料库');
   setText(
     '#validation-copy',
     validation.valid
-      ? `真实数据已加载 · ${formatDate(data.loadedAt)} · 写入仅限用户层`
-      : '请选择包含核心 career-ops 文件的文件夹',
+      ? `资料已加载 · ${formatDate(data.loadedAt)} · 已启用安全写入`
+      : '请选择包含简历、个人资料和岗位数据的文件夹',
   );
-  setText('.ledger-icon', validation.valid ? '✓' : '!');
+  const ledgerIcon = element('.ledger-icon');
+  clear(ledgerIcon);
+  const ledgerGlyph = make('i');
+  ledgerGlyph.dataset.lucide = validation.valid ? 'badge-check' : 'triangle-alert';
+  ledgerIcon.append(ledgerGlyph);
   const checks = element('#validation-checks');
   clear(checks);
   validation.checks.forEach((check) => {
     const chip = make('span', check.present ? 'check-chip ok' : check.required ? 'check-chip missing' : 'check-chip optional');
-    chip.append(make('i', '', check.present ? '✓' : check.required ? '×' : '–'));
-    chip.append(document.createTextNode(check.label));
-    chip.title = check.relativePath;
+    const glyph = make('i');
+    glyph.dataset.lucide = check.present ? 'check' : check.required ? 'x' : 'minus';
+    chip.append(glyph);
+    chip.append(document.createTextNode(VALIDATION_LABELS[check.id] ?? '资料检查'));
     checks.append(chip);
   });
+  renderIcons();
   if (!validation.valid) {
     showNotice(validation.warnings[0] || '无法读取所选工作区。', 'error');
   } else if (validation.warnings.length) {
@@ -265,28 +854,88 @@ function renderVerificationCounts(): void {
   verificationDraft.forEach((item) => {
     counts[item.status] += 1;
   });
-  const container = element('#verification-counts');
-  clear(container);
-  (Object.keys(counts) as VerificationStatus[]).forEach((status) => {
-    container.append(make(
-      'span',
-      `verification-count ${status}`,
-      `${VERIFICATION_LABELS[status]} ${counts[status]}`,
-    ));
-  });
+  const total = verificationDraft.length;
+  const attention = counts.unverified + counts.needs_review;
+  const percentage = total ? Math.round((counts.verified / total) * 100) : 100;
+  setText('#verification-attention-count', String(attention));
+  setText('#verification-verified-count', String(counts.verified));
+  setText('#verification-all-count', String(total));
+  setText('#verification-progress-label', `${percentage}% 已确认`);
+  element<WebAwesomeProgressBar>('#verification-progress-bar').value = percentage;
+  setText(
+    '#verification-summary-heading',
+    attention ? `还有 ${attention} 项需要确认` : '申请资料已就绪',
+  );
+  setText(
+    '#verification-summary-copy',
+    attention
+      ? '只处理下方的例外项；已确认内容已收起，不需要重复检查。'
+      : '所有资料都已确认，可以安全用于简历和申请材料。',
+  );
 }
 
 function verificationRow(item: VerificationItem): HTMLElement {
   const row = make('article', 'verification-row');
   row.dataset.factId = item.id;
   row.dataset.status = item.status;
+  const needsAttention = item.status !== 'verified';
+
+  const selector = make('label', `verification-selector${needsAttention ? '' : ' hidden'}`);
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = selectedVerificationIds.has(item.id);
+  const label = verificationItemLabel(item);
+  checkbox.setAttribute('aria-label', `选择 ${label}`);
+  checkbox.addEventListener('change', () => {
+    if (checkbox.checked) selectedVerificationIds.add(item.id);
+    else selectedVerificationIds.delete(item.id);
+    renderVerificationSelection();
+  });
+  selector.append(checkbox);
 
   const identity = make('div', 'verification-identity');
   identity.append(
-    make('strong', '', item.label),
-    make('span', '', item.category),
-    make('code', '', item.source || '未记录来源'),
+    make('strong', '', label),
+    make('span', '', `${verificationCategoryLabel(item.category)} · ${verificationSourceLabel(item.source)}`),
   );
+
+  const state = make('span', `verification-state ${item.status}`);
+  state.append(make('i', 'verification-state-dot'));
+  state.append(document.createTextNode(VERIFICATION_LABELS[item.status]));
+
+  const actions = make('div', 'verification-row-actions');
+  if (needsAttention) {
+    const confirm = make('button', 'verification-confirm-button', '我已核对') as HTMLButtonElement;
+    confirm.type = 'button';
+    confirm.addEventListener('click', () => {
+      item.status = 'verified';
+      selectedVerificationIds.delete(item.id);
+      setProfileDirty(true);
+      setText('#verification-save-message', `${label}已核对；保存后才会用于简历和申请材料。`);
+      renderVerification();
+    });
+    actions.append(confirm);
+  }
+  const detailsButton = make('button', 'verification-details-button', expandedVerificationIds.has(item.id) ? '收起' : '详情') as HTMLButtonElement;
+  detailsButton.type = 'button';
+  detailsButton.setAttribute('aria-expanded', String(expandedVerificationIds.has(item.id)));
+  const detailsId = `verification-details-${item.id.replace(/[^a-z0-9_-]/gi, '-')}`;
+  detailsButton.setAttribute('aria-controls', detailsId);
+  detailsButton.addEventListener('click', () => {
+    if (expandedVerificationIds.has(item.id)) expandedVerificationIds.delete(item.id);
+    else expandedVerificationIds.add(item.id);
+    renderVerification();
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>(`.verification-row[data-fact-id="${CSS.escape(item.id)}"] .verification-details-button`)?.focus();
+    });
+  });
+  actions.append(detailsButton);
+
+  const summary = make('div', 'verification-row-summary');
+  summary.append(selector, identity, state, actions);
+
+  const details = make('div', `verification-details${expandedVerificationIds.has(item.id) ? '' : ' hidden'}`);
+  details.id = detailsId;
 
   const status = make('select') as HTMLSelectElement;
   status.dataset.verificationField = 'status';
@@ -297,31 +946,57 @@ function verificationRow(item: VerificationItem): HTMLElement {
     option.selected = value === item.status;
     status.append(option);
   });
-  status.setAttribute('aria-label', `${item.label} 验证状态`);
+  status.setAttribute('aria-label', `${label} 验证状态`);
 
   const copy = make('div', 'verification-copy');
+  const sourceField = make('div', 'verification-source-field');
+  sourceField.append(make('span', '', '原始来源'), make('code', '', item.source || '未记录来源'));
+  const statusField = make('label', 'verification-detail-field');
+  statusField.append(make('span', '', '使用状态'), status);
   const evidence = make('input') as HTMLInputElement;
   evidence.dataset.verificationField = 'evidence';
   evidence.value = item.evidence;
-  evidence.placeholder = '验证证据';
+  evidence.placeholder = '例如：证书、合同或公开项目链接…';
   evidence.maxLength = 1000;
-  evidence.setAttribute('aria-label', `${item.label} 验证证据`);
+  evidence.setAttribute('aria-label', `${label} 验证证据`);
   const note = make('input') as HTMLInputElement;
   note.dataset.verificationField = 'note';
   note.value = item.note;
-  note.placeholder = '备注';
+  note.placeholder = '补充说明（可选）…';
   note.maxLength = 1000;
-  note.setAttribute('aria-label', `${item.label} 备注`);
-  copy.append(evidence, note);
-  row.append(identity, status, copy);
+  note.setAttribute('aria-label', `${label} 备注`);
+  const evidenceField = make('label', 'verification-detail-field');
+  evidenceField.append(make('span', '', '证据或依据'), evidence);
+  const noteField = make('label', 'verification-detail-field');
+  noteField.append(make('span', '', '备注'), note);
+  copy.append(sourceField, statusField, evidenceField, noteField);
+  details.append(copy);
+  row.append(summary, details);
   return row;
+}
+
+function renderVerificationSelection(): void {
+  const selected = [...selectedVerificationIds]
+    .filter((id) => verificationDraft.some((item) => item.id === id && item.status !== 'verified'));
+  const actions = element('#verification-bulk-actions');
+  actions.classList.toggle('hidden', selected.length === 0);
+  setText('#verification-selection-count', `已选择 ${selected.length} 项`);
+  element<HTMLButtonElement>('#verification-confirm-selected').disabled = selected.length === 0;
 }
 
 function renderVerification(): void {
   const list = element('#verification-list');
   clear(list);
-  verificationDraft.forEach((item) => list.append(verificationRow(item)));
+  const visible = verificationDraft.filter((item) => {
+    if (verificationFilter === 'attention') return item.status !== 'verified';
+    if (verificationFilter === 'verified') return item.status === 'verified';
+    return true;
+  });
+  visible.forEach((item) => list.append(verificationRow(item)));
+  element('#verification-empty').classList.toggle('hidden', visible.length > 0);
   renderVerificationCounts();
+  renderVerificationSelection();
+  renderIcons();
 }
 
 function renderProfile(data: CareerOpsSnapshot): void {
@@ -369,38 +1044,103 @@ function renderProfile(data: CareerOpsSnapshot): void {
     '#migration-detail',
     migration.migratedAt
       ? `${migration.sourceLabel} · ${migration.migratedAt}`
-      : 'profile.yml 中没有迁移记录',
+      : '资料来源未记录',
   );
   const boundary = element('#migration-boundary');
   boundary.textContent = migration.runtimeDisconnected
-    ? '运行时已断开旧 JSON'
-    : '旧事实源边界待确认';
+    ? '旧资料来源已停用'
+    : '资料来源待确认';
   boundary.classList.toggle('warning', !migration.runtimeDisconnected);
 
   verificationDraft = data.profileWorkspace.verification.map((item) => ({ ...item }));
+  selectedVerificationIds.clear();
   renderVerification();
   setProfileDirty(false);
 }
 
+function renderCvOutline(markdown: string): void {
+  const outline = element('#cv-outline');
+  clear(outline);
+  const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
+  headings.forEach((heading, index) => {
+    const button = make('button', '', heading);
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      const editorHeadings = element('#cv-visual-editor').querySelectorAll('h2');
+      editorHeadings.item(index)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    outline.append(button);
+  });
+  if (!headings.length) outline.append(make('span', 'muted-copy', '添加章节后会显示在这里'));
+}
+
+async function renderCvEditor(markdown: string): Promise<void> {
+  const renderId = ++cvEditorRenderId;
+  const previous = cvEditor;
+  cvEditor = null;
+  if (previous) await previous.destroy();
+  if (renderId !== cvEditorRenderId) return;
+
+  const root = element('#cv-visual-editor');
+  clear(root);
+  const loading = element('#cv-editor-loading');
+  loading.hidden = false;
+
+  const nextEditor = new Crepe({
+    root,
+    defaultValue: markdown,
+    features: {
+      [CrepeFeature.ImageBlock]: false,
+      [CrepeFeature.AI]: false,
+    },
+    featureConfigs: {
+      [CrepeFeature.Placeholder]: {
+        text: '从这里开始完善你的简历…',
+      },
+    },
+  });
+  nextEditor.on((listener) => {
+    listener.markdownUpdated((_ctx, nextMarkdown) => {
+      if (nextEditor !== cvEditor) return;
+      renderCvOutline(nextMarkdown);
+      setCvDirty(nextMarkdown !== cvEditorBaseline);
+    });
+  });
+
+  try {
+    await nextEditor.create();
+    if (renderId !== cvEditorRenderId) {
+      await nextEditor.destroy();
+      return;
+    }
+    cvEditor = nextEditor;
+    cvEditorBaseline = nextEditor.getMarkdown();
+    root.querySelector('.ProseMirror')?.setAttribute('aria-label', '简历内容');
+    loading.hidden = true;
+    setCvDirty(false);
+  } catch (error) {
+    loading.textContent = error instanceof Error ? `编辑器无法载入：${error.message}` : '编辑器无法载入。';
+    showNotice('简历编辑器无法载入，原始简历没有被修改。', 'error');
+  }
+}
+
 function renderCv(data: CareerOpsSnapshot): void {
   setText('#cv-summary', cvSummary(data.cv.content));
-  element<HTMLTextAreaElement>('#cv-document').value = data.cv.content;
   setText(
     '#cv-meta',
     data.cv.exists
       ? `${formatBytes(data.cv.bytes)} · 更新于 ${formatDate(data.cv.modifiedAt)}`
       : '文件不存在',
   );
-  const outline = element('#cv-outline');
-  clear(outline);
-  const headings = [...data.cv.content.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
-  headings.forEach((heading) => outline.append(make('span', '', heading)));
-  if (!headings.length) outline.append(make('span', 'muted-copy', '没有二级章节'));
+  renderCvOutline(data.cv.content);
   setCvDirty(false);
+  void renderCvEditor(data.cv.content);
 }
 
 function makeJobRow(job: PipelineJob, compact = false): HTMLElement {
   const row = make('article', compact ? 'compact-job-row' : 'job-row');
+  row.classList.toggle('selected', !compact && job.id === selectedJobId);
+  const report = snapshot ? reportForJob(snapshot, job) : null;
   const marker = make('span', 'job-marker', job.company.slice(0, 2).toUpperCase());
   const copy = make('div', 'job-copy');
   copy.append(make('strong', '', job.role), make('span', '', job.company));
@@ -409,19 +1149,195 @@ function makeJobRow(job: PipelineJob, compact = false): HTMLElement {
   if (job.postedAt) meta.append(make('span', '', `发布 ${job.postedAt}`));
   meta.append(make('span', '', sourceHost(job.url)));
   const state = make('span', job.done ? 'job-state done' : 'job-state pending', job.done ? '已处理' : '待处理');
-  row.append(marker, copy, meta, state);
+  const score = make('span', `score-pill ${report ? scoreTone(report.score) : 'neutral'}`, report?.score ? `${report.score}/5` : '未评分');
+  row.append(marker, copy, meta, score, state);
+  if (!compact) {
+    const open = make('button', 'job-evaluate-button', job.id === selectedJobId ? '已选择' : '查看');
+    open.type = 'button';
+    open.dataset.selectJobId = job.id;
+    open.setAttribute('aria-label', `查看 ${job.company} 的 ${job.role}`);
+    row.append(open);
+  } else {
+    const open = make('button', 'compact-job-open text-button', '打开') as HTMLButtonElement;
+    open.type = 'button';
+    open.dataset.openRecommendedJobId = job.id;
+    open.setAttribute('aria-label', `打开 ${job.company} 的 ${job.role}`);
+    row.append(open);
+  }
   return row;
+}
+
+function jobReportScore(job: PipelineJob): number | null {
+  const score = snapshot ? Number.parseFloat(reportForJob(snapshot, job)?.score ?? '') : Number.NaN;
+  return Number.isFinite(score) ? score : null;
+}
+
+function sortJobsForDisplay(jobs: PipelineJob[]): PipelineJob[] {
+  return [...jobs].sort((left, right) => {
+    const leftScore = jobReportScore(left);
+    const rightScore = jobReportScore(right);
+    if (leftScore !== null || rightScore !== null) {
+      if (leftScore === null) return 1;
+      if (rightScore === null) return -1;
+      if (leftScore !== rightScore) return rightScore - leftScore;
+    }
+    const leftDate = Date.parse(left.postedAt || '') || 0;
+    const rightDate = Date.parse(right.postedAt || '') || 0;
+    if (leftDate !== rightDate) return rightDate - leftDate;
+    return `${left.company} ${left.role}`.localeCompare(`${right.company} ${right.role}`);
+  });
+}
+
+function recommendedJobs(data: CareerOpsSnapshot): PipelineJob[] {
+  return sortJobsForDisplay(data.pipeline.jobs.filter((job) => reportForJob(data, job) !== null));
 }
 
 function filteredJobs(): PipelineJob[] {
   if (!snapshot) return [];
   const query = pipelineQuery.trim().toLocaleLowerCase();
-  return snapshot.pipeline.jobs.filter((job) => {
+  return sortJobsForDisplay(snapshot.pipeline.jobs.filter((job) => {
     const stateMatches = pipelineFilter === 'all'
       || (pipelineFilter === 'processed' ? job.done : !job.done);
     const haystack = `${job.company} ${job.role} ${job.location}`.toLocaleLowerCase();
     return stateMatches && (!query || haystack.includes(query));
-  });
+  }));
+}
+
+
+function sameJobIdentity(leftCompany: string, leftRole: string, rightCompany: string, rightRole: string): boolean {
+  const normalize = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+  return Boolean(leftCompany && leftRole)
+    && normalize(leftCompany) === normalize(rightCompany)
+    && normalize(leftRole) === normalize(rightRole);
+}
+
+function reportForJob(data: CareerOpsSnapshot, job: PipelineJob): ReportSummary | null {
+  return data.reports.find((report) => sameJobIdentity(report.company, report.role, job.company, job.role)) ?? null;
+}
+
+function trackerForJob(data: CareerOpsSnapshot, job: PipelineJob, report: ReportSummary | null): TrackerApplication | null {
+  const reportName = normalizeReportName(report?.name ?? '');
+  return data.tracker.applications.find((application) => {
+    const applicationReport = normalizeReportName(application.report);
+    if (reportName && applicationReport && applicationReport !== '—' && applicationReport === reportName) return true;
+    return sameJobIdentity(application.company, application.role, job.company, job.role);
+  }) ?? null;
+}
+
+function materialVersionsForJob(job: PipelineJob, report: ReportSummary | null): ApplicationMaterialVersion[] {
+  const reportName = normalizeReportName(report?.name ?? '');
+  return (materialsWorkspace?.versions ?? []).filter((version) => (
+    (reportName && normalizeReportName(version.reportName) === reportName)
+    || sameJobIdentity(version.company, version.role, job.company, job.role)
+  ));
+}
+
+function setWorkbenchStage(stage: 'source' | 'report' | 'materials' | 'application', complete: boolean, current: boolean): void {
+  const node = element('[data-workbench-stage="' + stage + '"]');
+  node.classList.toggle('complete', complete);
+  node.classList.toggle('current', current);
+}
+
+function renderJobWorkbench(data: CareerOpsSnapshot): void {
+  const visibleJobs = filteredJobs();
+  if (!visibleJobs.some((job) => job.id === selectedJobId)) selectedJobId = visibleJobs[0]?.id ?? '';
+  const job = data.pipeline.jobs.find((candidate) => candidate.id === selectedJobId) ?? null;
+  element('#job-workbench-empty').classList.toggle('hidden', Boolean(job));
+  element('#job-workbench-content').classList.toggle('hidden', !job);
+  if (!job) return;
+
+  const report = reportForJob(data, job);
+  const tracker = trackerForJob(data, job, report);
+  const versions = materialVersionsForJob(job, report);
+  const status = tracker?.status || '未记录';
+  const applied = Boolean(tracker && tracker.status !== 'Evaluated');
+  const applicationClosed = Boolean(tracker && ['Hired', 'Rejected', 'Discarded', 'SKIP'].includes(tracker.status));
+  currentWorkbenchReportName = report?.name ?? '';
+  currentWorkbenchTrackerRow = tracker?.number ?? '';
+
+  setText('#workbench-company', job.company || '未知公司');
+  setText('#workbench-role', job.role || '未命名岗位');
+  setText('#workbench-meta', [job.location, sourceHost(job.url)].filter(Boolean).join(' · '));
+  setText('#workbench-score', report?.score || '—');
+  setText('#workbench-score-label', report ? '匹配评分' : '尚未评分');
+  setText('#workbench-trust', job.trust || '待确认');
+  setText('#workbench-posted', job.postedAt || '未注明');
+  setText('#workbench-version-count', versions.length);
+  setText('#workbench-tracker-status', status);
+  setText('#workbench-report-state', report ? '已完成' : '待评估');
+  setText('#workbench-material-state', versions.length ? versions.at(-1)?.versionLabel || versions.length + ' 个版本' : '待准备');
+  setText('#workbench-application-state', tracker ? status : '未投递');
+
+  setWorkbenchStage('source', true, false);
+  setWorkbenchStage('report', Boolean(report), Boolean(!report));
+  setWorkbenchStage('materials', versions.length > 0, Boolean(report && !versions.length));
+  setWorkbenchStage('application', applied, Boolean(versions.length && !applied));
+
+  const reportButton = element('#workbench-report-button');
+  const materialsButton = element('#workbench-materials-button');
+  const trackerButton = element('#workbench-tracker-button');
+  reportButton.classList.toggle('hidden', !report);
+  materialsButton.classList.toggle('hidden', !versions.length);
+  trackerButton.classList.toggle('hidden', !tracker);
+
+  if (!report) {
+    currentWorkbenchAction = 'evaluate';
+    setText('#workbench-next-copy', '先验证岗位是否仍开放，再根据你的真实资料完成 A–G 评分。');
+    setText('#workbench-primary-action', '评估这个岗位');
+  } else if (!versions.length) {
+    currentWorkbenchAction = 'prepare-materials';
+    setText('#workbench-next-copy', '评分和证据已经就绪；确认申请意图后生成定制材料。');
+    setText('#workbench-primary-action', '准备申请材料');
+  } else if (tracker?.status === 'Evaluated') {
+    currentWorkbenchAction = 'mark-applied';
+    setText('#workbench-next-copy', '申请材料已经准备好。完成外部投递后，再在这里记录申请。');
+    setText('#workbench-primary-action', '已投递，记录申请');
+  } else if (tracker) {
+    currentWorkbenchAction = 'view-tracker';
+    setText(
+      '#workbench-next-copy',
+      applicationClosed
+        ? '这条申请已经归档；可查看最终结果和历史记录。'
+        : '申请已经进入跟进流程；查看回复、面试安排或更新结果。',
+    );
+    setText('#workbench-primary-action', applicationClosed ? '查看申请结果' : '继续推进申请');
+  } else {
+    currentWorkbenchAction = 'view-materials';
+    setText('#workbench-next-copy', '材料已经生成；检查最终文件后完成投递。');
+    setText('#workbench-primary-action', '查看申请材料');
+  }
+}
+
+async function selectPipelineJob(jobId: string): Promise<void> {
+  selectedJobId = jobId;
+  if (!snapshot) return;
+  renderPipeline(snapshot);
+  const job = snapshot.pipeline.jobs.find((candidate) => candidate.id === jobId);
+  if (job && reportForJob(snapshot, job) && !materialsWorkspace) await loadMaterialsWorkspace(false);
+  if (snapshot) renderJobWorkbench(snapshot);
+  window.requestAnimationFrame(() => element('#job-workbench').scrollIntoView({ block: 'nearest' }));
+}
+
+function openSelectedTracker(): void {
+  if (!currentWorkbenchTrackerRow) return;
+  activateRoute('applications-tracker');
+  element<HTMLSelectElement>('#tracker-status-row').value = currentWorkbenchTrackerRow;
+  element<HTMLSelectElement>('#outcome-row').value = currentWorkbenchTrackerRow;
+  window.requestAnimationFrame(() => element('#tracker-status-form').scrollIntoView({ block: 'center' }));
+}
+
+async function markSelectedJobApplied(): Promise<void> {
+  if (!currentWorkbenchTrackerRow) return;
+  if (!await confirmAction('确认已经完成外部投递，并把这条申请更新为 Applied？', {
+    title: '记录已投递', action: '记录申请',
+  })) return;
+  try {
+    const result = await window.careerOps.updateTrackerStatus({ rowNumber: currentWorkbenchTrackerRow, status: 'Applied' });
+    renderSnapshot(result.snapshot);
+    showNotice(result.message || '申请已记录。');
+  } catch (error) {
+    showNotice(error instanceof Error ? error.message : '无法记录申请状态。', 'error');
+  }
 }
 
 function renderPipeline(data: CareerOpsSnapshot): void {
@@ -432,21 +1348,25 @@ function renderPipeline(data: CareerOpsSnapshot): void {
   const list = element('#pipeline-jobs');
   clear(list);
   const jobs = filteredJobs();
+  if (!jobs.some((job) => job.id === selectedJobId)) selectedJobId = jobs[0]?.id ?? '';
   jobs.forEach((job) => list.append(makeJobRow(job)));
   if (!jobs.length) {
     const empty = make('div', 'empty-state inline');
-    empty.append(make('span', '', '◇'), make('h3', '', '没有符合条件的岗位'), make('p', '', '更换筛选条件或选择另一个 career-ops 工作区。'));
+    empty.append(make('span', '', '◇'), make('h3', '', '没有符合条件的岗位'), make('p', '', '更换筛选条件，或前往“发现”获取新的岗位。'));
     list.append(empty);
   }
 
   const overview = element('#overview-jobs');
   clear(overview);
-  data.pipeline.jobs.filter((job) => !job.done).slice(0, 6).forEach((job) => {
-    overview.append(makeJobRow(job, true));
-  });
+  const recommendations = recommendedJobs(data);
+  const overviewJobs = recommendations.length
+    ? recommendations.slice(0, 6)
+    : sortJobsForDisplay(data.pipeline.jobs.filter((job) => !job.done)).slice(0, 6);
+  overviewJobs.forEach((job) => overview.append(makeJobRow(job, true)));
   if (!overview.children.length) {
-    overview.append(make('p', 'empty-copy', '当前没有待处理岗位。'));
+    overview.append(make('p', 'empty-copy', '当前没有可推荐岗位。'));
   }
+  renderJobWorkbench(data);
 }
 
 function portalProvider(entry: PortalEntry): string {
@@ -500,8 +1420,8 @@ function portalRow(entry: PortalEntry): HTMLElement {
   const remove = make('button', 'icon-button', '×');
   remove.type = 'button';
   remove.dataset.removePortal = entry.id;
-  remove.title = '删除 Portal';
-  remove.setAttribute('aria-label', `删除 ${entry.name || 'Portal'}`);
+  remove.title = '删除职位来源';
+  remove.setAttribute('aria-label', `删除 ${entry.name || '职位来源'}`);
   actions.append(remove);
   row.append(enabled, identity, provider, source, actions);
   return row;
@@ -527,7 +1447,7 @@ function renderPortalEditor(): void {
   });
   const select = element<HTMLSelectElement>('#quick-scan-company');
   const selected = select.value;
-  select.replaceChildren(new Option('全部已启用 Portal', ''));
+  select.replaceChildren(new Option('全部已启用来源', ''));
   portalDraft.filter((entry) => entry.kind === 'company' && entry.enabled).forEach((entry) => {
     select.append(new Option(entry.name, entry.name));
   });
@@ -612,6 +1532,13 @@ function renderAtsJobs(): void {
       health.append(make('small', '', livenessLabels[job.liveness]));
     }
     row.append(health);
+    const action = make('td', 'ats-job-action');
+    const evaluate = make('button', 'job-evaluate-button', job.processed ? '重新评估' : '评估');
+    evaluate.type = 'button';
+    evaluate.dataset.evaluateUrl = job.url;
+    evaluate.setAttribute('aria-label', `评估 ${job.company} 的 ${job.role}`);
+    action.append(evaluate);
+    row.append(action);
     body.append(row);
   });
   element('#ats-job-empty').classList.toggle('hidden', jobs.length > 0);
@@ -642,6 +1569,7 @@ function renderAtsWorkspace(data: AtsWorkspace): void {
   renderPortalEditor();
   renderAtsJobs();
   renderAtsRuns();
+  if (snapshot) renderJobsWorkflow(snapshot);
   setPortalDirty(false);
 }
 
@@ -823,12 +1751,45 @@ async function saveDailySchedule(): Promise<void> {
     });
     automationWorkspace = { ...automationWorkspace, schedule };
     renderSchedule(schedule);
-    showNotice(schedule.enabled ? '每日 LaunchAgent 已安装并加载。' : '每日 LaunchAgent 已停用。');
+    showNotice(schedule.enabled ? '每日自动运行已启用。' : '每日自动运行已停用。');
   } catch (error) {
     showNotice(error instanceof Error ? error.message : '每日自动化保存失败。', 'error');
   } finally {
     button.disabled = false;
   }
+}
+
+function normalizeReportName(value: string): string {
+  return value.trim().split(/[\\/]/).at(-1)?.replace(/\.md$/i, '') ?? '';
+}
+
+function reportForApplication(application: TrackerApplication): ReportSummary | null {
+  const reports = materialsWorkspace?.reports ?? snapshot?.reports ?? [];
+  const reportReference = normalizeReportName(application.report);
+  return reports.find((report) => {
+    const reportName = normalizeReportName(report.name);
+    if (reportReference && reportReference !== '—' && reportName === reportReference) return true;
+    return Boolean(
+      application.company
+      && application.role
+      && report.company.toLowerCase() === application.company.toLowerCase()
+      && report.role.toLowerCase() === application.role.toLowerCase()
+    );
+  }) ?? null;
+}
+
+async function openMaterialsForReport(reportName: string): Promise<void> {
+  if (!materialsWorkspace) await loadMaterialsWorkspace();
+  const report = materialsWorkspace?.reports.find((candidate) => candidate.name === reportName);
+  if (!report) {
+    showNotice('没有找到对应的岗位报告，无法准备申请材料。', 'error');
+    return;
+  }
+  activateRoute('applications-materials');
+  const select = element<HTMLSelectElement>('#material-report');
+  select.value = report.name;
+  updateMaterialReportSummary();
+  window.requestAnimationFrame(() => element('#material-generator-form').scrollIntoView({ block: 'start' }));
 }
 
 function materialReport(): ReportSummary | null {
@@ -843,7 +1804,7 @@ function updateMaterialReportSummary(): void {
   const numericScore = Number.parseFloat(report?.score ?? '');
   clear(summary);
   if (!report) {
-    summary.append(make('strong', '', '尚未选择岗位'), make('span', '', '先完成阶段 4 评估，再生成申请材料。'));
+    summary.append(make('strong', '', '尚未选择岗位'), make('span', '', '先完成岗位评估，再生成申请材料。'));
     gate.classList.add('hidden');
     return;
   }
@@ -970,6 +1931,10 @@ function renderMaterialsWorkspace(data: ApplicationMaterialsWorkspace, preferred
   else activeMaterialVersion = data.versions[0] ?? null;
   renderMaterialHistory();
   renderActiveMaterialVersion();
+  if (snapshot) {
+    renderApplicationsWorkflow(snapshot);
+    renderJobWorkbench(snapshot);
+  }
   updateMaterialReportSummary();
   const packages = [...new Set(data.versions.map((version) => version.packageId))];
   const selectedPackage = activeMaterialVersion?.packageId ?? element<HTMLSelectElement>('#comparison-package').value;
@@ -1012,7 +1977,7 @@ async function generateMaterials(): Promise<void> {
     activeMaterialTab = 'artifacts';
     renderMaterialsWorkspace(result.workspace, result.version);
     setText('#material-generation-state', `${result.version.versionLabel} 已完成`);
-    showNotice(`申请材料已保存到 output/application-materials/${result.version.packageId}/${result.version.versionLabel}/。`);
+    showNotice(`申请材料 ${result.version.versionLabel} 已安全保存。`);
   } catch (error) {
     setText('#material-generation-state', '生成失败');
     showNotice(error instanceof Error ? error.message : '申请材料生成失败。', 'error');
@@ -1084,6 +2049,14 @@ function appendTrackerRow(body: HTMLElement, application: TrackerApplication): v
   row.append(statusCell);
   row.append(make('td', '', application.date || '—'));
   row.append(make('td', 'pdf-cell', application.pdf || '—'));
+  const actionCell = make('td', 'tracker-action-cell');
+  const report = reportForApplication(application);
+  const materialButton = make('button', 'text-button', report ? '申请材料' : '先评估') as HTMLButtonElement;
+  materialButton.type = 'button';
+  materialButton.disabled = !report;
+  if (report) materialButton.dataset.prepareReport = report.name;
+  actionCell.append(materialButton);
+  row.append(actionCell);
   body.append(row);
 }
 
@@ -1128,12 +2101,50 @@ function renderTrackerSelectors(applications: TrackerApplication[]): void {
 }
 
 function renderLifecycleValue(selector: string, value: unknown): void {
-  element(selector).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  if (typeof value === 'string') {
+    element(selector).textContent = value;
+    return;
+  }
+  const labels: Record<string, string> = {
+    metadata: '摘要',
+    analysisDate: '分析日期',
+    totalTracked: '申请总数',
+    actionable: '建议跟进',
+    overdue: '已逾期',
+    urgent: '优先处理',
+    cold: '暂缓跟进',
+    waiting: '等待回复',
+    company: '公司',
+    role: '岗位',
+    status: '状态',
+    nextFollowup: '建议日期',
+    daysSinceApplication: '申请后天数',
+  };
+  const output: string[] = [];
+  const append = (key: string, item: unknown, depth = 0): void => {
+    const label = labels[key] ?? key.replace(/_/g, ' ');
+    const indent = '  '.repeat(depth);
+    if (Array.isArray(item)) {
+      output.push(`${indent}${label}：${item.length}`);
+      item.forEach((entry, index) => append(`第 ${index + 1} 项`, entry, depth + 1));
+    } else if (item && typeof item === 'object') {
+      output.push(`${indent}${label}`);
+      Object.entries(item as Record<string, unknown>).forEach(([childKey, child]) => append(childKey, child, depth + 1));
+    } else {
+      output.push(`${indent}${label}：${item === null || item === '' ? '未记录' : String(item)}`);
+    }
+  };
+  if (value && typeof value === 'object') {
+    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => append(key, item));
+  } else {
+    output.push('暂无跟进建议。');
+  }
+  element(selector).textContent = output.join('\n');
 }
 
 async function refreshFollowupCadence(): Promise<void> {
   const output = element('#followup-output');
-  output.textContent = '正在调用 career-ops 计算跟进节奏…';
+  output.textContent = '正在计算下一次跟进建议…';
   try {
     const cadence: FollowupCadenceResult = await window.careerOps.getFollowupCadence();
     renderLifecycleValue('#followup-output', cadence);
@@ -1145,8 +2156,10 @@ async function refreshFollowupCadence(): Promise<void> {
 async function submitTrackerStatus(): Promise<void> {
   const rowNumber = element<HTMLSelectElement>('#tracker-status-row').value;
   const status = element<HTMLSelectElement>('#tracker-status-value').value as TrackerStatus;
-  if (!rowNumber) return showNotice('请先选择一条 Tracker 记录。', 'error');
-  if (!window.confirm(`确认将 #${rowNumber} 更新为 ${status}？career-ops 将写入状态日志。`)) return;
+  if (!rowNumber) return showNotice('请先选择一条申请记录。', 'error');
+  if (!await confirmAction(`确认将 #${rowNumber} 更新为 ${status}？这项变更会保存到申请记录。`, {
+    title: '更新申请状态', action: '确认更新',
+  })) return;
   try {
     const result = await window.careerOps.updateTrackerStatus({
       rowNumber, status,
@@ -1162,8 +2175,10 @@ async function submitTrackerStatus(): Promise<void> {
 
 async function createFollowup(): Promise<void> {
   const rowNumber = element<HTMLSelectElement>('#tracker-status-row').value;
-  if (!rowNumber) return showNotice('请先选择一条 Tracker 记录。', 'error');
-  if (!window.confirm(`确认通过 career-ops 为 #${rowNumber} 建立跟进提醒？`)) return;
+  if (!rowNumber) return showNotice('请先选择一条申请记录。', 'error');
+  if (!await confirmAction(`确认为 #${rowNumber} 建立跟进提醒？`, {
+    title: '建立跟进提醒', action: '建立提醒',
+  })) return;
   try {
     const result = await window.careerOps.seedFollowup(rowNumber);
     renderSnapshot(result.snapshot);
@@ -1176,7 +2191,7 @@ async function createFollowup(): Promise<void> {
 
 async function analyzePastedReply(): Promise<void> {
   const resultElement = element('#reply-result');
-  resultElement.textContent = '正在通过 career-ops 写入候选队列并匹配…';
+  resultElement.textContent = '正在识别回复对应的申请…';
   element<HTMLButtonElement>('#apply-reply-suggestion-button').classList.add('hidden');
   currentReplyRecommendation = null;
   try {
@@ -1188,8 +2203,8 @@ async function analyzePastedReply(): Promise<void> {
       classification: recommendation.classification,
       match: recommendation.match,
       note: recommendation.canApplySuggestedStatus
-        ? '这只是建议；请点击“确认应用建议状态”才会调用 set-status.mjs。'
-        : '没有足够明确的匹配或建议状态，Tracker 不会被修改。',
+        ? '这只是建议；点击“确认应用建议状态”后才会修改申请记录。'
+        : '没有足够明确的匹配或建议状态，申请记录不会被修改。',
     });
     element<HTMLButtonElement>('#apply-reply-suggestion-button').classList.toggle('hidden', !recommendation.canApplySuggestedStatus);
   } catch (error) {
@@ -1201,7 +2216,9 @@ async function applyReplyRecommendation(): Promise<void> {
   const recommendation = currentReplyRecommendation;
   if (!recommendation?.canApplySuggestedStatus || !recommendation.match.applicationNumber) return;
   const status = recommendation.classification.suggestedTrackerUpdate as TrackerStatus;
-  if (!window.confirm(`确认将 #${recommendation.match.applicationNumber} 更新为 ${status}？此操作不会发送邮件。`)) return;
+  if (!await confirmAction(`确认将 #${recommendation.match.applicationNumber} 更新为 ${status}？此操作不会发送邮件。`, {
+    title: '应用回复建议', action: '更新状态',
+  })) return;
   try {
     const result = await window.careerOps.updateTrackerStatus({
       rowNumber: recommendation.match.applicationNumber,
@@ -1219,7 +2236,7 @@ async function applyReplyRecommendation(): Promise<void> {
 
 async function matchPastedInvite(): Promise<void> {
   const resultElement = element('#invite-result');
-  resultElement.textContent = '正在调用 career-ops 匹配面试邀请…';
+  resultElement.textContent = '正在匹配面试邀请对应的申请…';
   try {
     const result = await window.careerOps.matchInvite(inputValue('#invite-text'));
     renderLifecycleValue('#invite-result', result);
@@ -1236,8 +2253,10 @@ async function matchPastedInvite(): Promise<void> {
 async function submitOutcome(): Promise<void> {
   const rowNumber = element<HTMLSelectElement>('#outcome-row').value;
   const outcomeType = element<HTMLSelectElement>('#outcome-type').value as Parameters<typeof window.careerOps.recordOutcome>[0]['outcomeType'];
-  if (!rowNumber) return showNotice('请先选择一条 Tracker 记录。', 'error');
-  if (!window.confirm(`确认归档 #${rowNumber} 的“${outcomeType}”结果？career-ops 会保存结果和同步 Tracker。`)) return;
+  if (!rowNumber) return showNotice('请先选择一条申请记录。', 'error');
+  if (!await confirmAction(`确认记录 #${rowNumber} 的“${outcomeType}”结果？申请状态会同步更新。`, {
+    title: '归档申请结果', action: '确认归档', tone: 'danger',
+  })) return;
   try {
     const result = await window.careerOps.recordOutcome({
       rowNumber, outcomeType, stage: inputValue('#outcome-stage'), feedback: inputValue('#outcome-feedback'),
@@ -1272,7 +2291,7 @@ function renderReports(data: CareerOpsSnapshot): void {
   clear(list);
   if (!data.reports.length) {
     const empty = make('div', 'empty-state inline');
-    empty.append(make('span', '', '≡'), make('h3', '', '还没有评估报告'), make('p', '', 'reports/ 当前为空。本阶段不会运行 AI 评估。'));
+    empty.append(make('span', '', '≡'), make('h3', '', '还没有评估报告'), make('p', '', '评估一个岗位后，完整报告会显示在这里。'));
     list.append(empty);
     return;
   }
@@ -1342,6 +2361,10 @@ function renderAiSettings(settings: AiSettings): void {
   );
   element<HTMLButtonElement>('#clear-model-key-button').disabled = !settings.keyConfigured;
   element<HTMLButtonElement>('#delete-model-service-button').disabled = settings.services.length <= 1;
+  if (snapshot) {
+    renderGuidedSetup(snapshot);
+    renderTodayFocus(snapshot);
+  }
 }
 
 async function loadAiSettings(): Promise<void> {
@@ -1469,7 +2492,9 @@ async function testModelConnection(): Promise<void> {
 async function deleteModelService(): Promise<void> {
   if (!currentAiSettings || currentAiSettings.services.length <= 1) return;
   const service = currentAiSettings.services.find((item) => item.id === currentAiSettings?.activeServiceId);
-  if (!window.confirm(`确定删除“${service?.name ?? '当前服务'}”及其本机加密 Key 吗？`)) return;
+  if (!await confirmAction(`确定删除“${service?.name ?? '当前服务'}”及其本机加密 Key 吗？`, {
+    title: '删除模型服务', action: '删除服务', tone: 'danger',
+  })) return;
   try {
     renderAiSettings(await window.careerOps.deleteAiService(currentAiSettings.activeServiceId));
     showNotice('模型服务已删除。');
@@ -1513,7 +2538,7 @@ function renderJobEvaluation(evaluation: JobEvaluation): void {
   setText('#job-pricing-source', evaluation.usage.pricingSource === 'user-configured' ? '按用户配置单价' : '未配置单价');
   setText('#job-evidence-count', evaluation.evidenceCount);
   setText('#job-report-number', evaluation.reportName.match(/^\d+/)?.[0] ?? '—');
-  setText('#job-tracker-status', evaluation.trackerStatus === 'merged' ? 'Tracker 已登记' : 'Tracker 待合并');
+  setText('#job-tracker-status', evaluation.trackerStatus === 'merged' ? '申请记录已登记' : '申请记录待登记');
   setText('#job-legitimacy-tier', evaluation.legitimacyTier);
 
   const blocks = element('#job-evaluation-blocks');
@@ -1691,6 +2716,10 @@ function renderAnalysis(analysis: CompetitivenessAnalysis): void {
   const checkbox = element<HTMLInputElement>('#positioning-confirm-checkbox');
   checkbox.checked = false;
   element<HTMLButtonElement>('#confirm-positioning-button').disabled = true;
+  if (snapshot) {
+    renderProfileReadiness(snapshot);
+    renderTodayFocus(snapshot);
+  }
 }
 
 async function loadAnalysis(useAi = false): Promise<void> {
@@ -1752,6 +2781,11 @@ function renderSnapshot(data: CareerOpsSnapshot): void {
   renderMetrics(data);
   renderProfile(data);
   renderCv(data);
+  renderProfileReadiness(data);
+  renderGuidedSetup(data);
+  renderJobsWorkflow(data);
+  renderApplicationsWorkflow(data);
+  renderTodayFocus(data);
   renderPipeline(data);
   renderTracker(data);
   renderReports(data);
@@ -1796,8 +2830,8 @@ function updateVerificationFromControl(target: HTMLElement): void {
   const value = (target as HTMLInputElement | HTMLSelectElement).value;
   if (field === 'status') {
     item.status = value as VerificationStatus;
-    row.dataset.status = item.status;
-    renderVerificationCounts();
+    if (item.status === 'verified') selectedVerificationIds.delete(item.id);
+    renderVerification();
   } else {
     item[field] = value;
   }
@@ -1811,17 +2845,18 @@ function downgradeLinkedFact(target: HTMLElement): void {
   const item = verificationDraft.find((candidate) => candidate.id === id);
   if (!item || item.status !== 'verified') return;
   item.status = 'needs_review';
-  const select = element<HTMLSelectElement>(
-    `.verification-row[data-fact-id="${CSS.escape(id)}"] select`,
-  );
-  select.value = 'needs_review';
-  select.closest<HTMLElement>('.verification-row')?.setAttribute('data-status', 'needs_review');
-  renderVerificationCounts();
+  verificationFilter = 'attention';
+  document.querySelectorAll<HTMLButtonElement>('[data-verification-filter]').forEach((button) => {
+    const active = button.dataset.verificationFilter === verificationFilter;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  renderVerification();
 }
 
 function ensureNoUnsavedChanges(): boolean {
   if (!profileDirty && !cvDirty && !portalDirty) return true;
-  showNotice('存在未保存修改。请先保存资料、CV 或 Portal，再重新读取或切换工作区。', 'error');
+  showNotice('存在未保存修改。请先保存个人资料、简历或职位来源，再重新读取或切换资料库。', 'error');
   return false;
 }
 
@@ -1843,9 +2878,9 @@ async function savePortalChanges(): Promise<void> {
     renderAtsWorkspace(atsWorkspace);
     const state = element('#portal-save-state');
     state.textContent = '已安全保存'; state.className = 'save-state saved';
-    showNotice(`Portal 已保存；原版本备份于 ${result.backupDirectory}。`);
+    showNotice('职位来源已保存，并已创建备份。');
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : 'Portal 保存失败。', 'error');
+    showNotice(error instanceof Error ? error.message : '职位来源保存失败。', 'error');
   } finally {
     button.disabled = !portalDirty;
   }
@@ -1877,7 +2912,7 @@ function readScanRequest(): ScanRequest {
 
 async function runScan(): Promise<void> {
   if (portalDirty) {
-    showNotice('Portal 配置有未保存修改，请先保存再运行扫描。', 'error');
+    showNotice('职位来源有未保存修改，请先保存再运行扫描。', 'error');
     return;
   }
   try {
@@ -1895,7 +2930,7 @@ function setScanMode(mode: ScanRequest['kind']): void {
   document.querySelectorAll<HTMLButtonElement>('[data-scan-mode]').forEach((button) => button.classList.toggle('active', button.dataset.scanMode === mode));
   element('#quick-scan-controls').classList.toggle('hidden', mode !== 'quick');
   element('#full-scan-controls').classList.toggle('hidden', mode !== 'full');
-  element('#start-scan-button').textContent = mode === 'quick' ? '开始 Portal 扫描' : '开始全量反向扫描';
+  element('#start-scan-button').textContent = mode === 'quick' ? '开始常规扫描' : '开始全量扫描';
 }
 
 async function saveProfileChanges(): Promise<void> {
@@ -1930,13 +2965,13 @@ async function saveProfileChanges(): Promise<void> {
 }
 
 async function saveCvChanges(): Promise<void> {
-  if (!snapshot || !cvDirty) return;
+  if (!snapshot || !cvDirty || !cvEditor) return;
   const button = element<HTMLButtonElement>('#save-cv-button');
   button.disabled = true;
   try {
     const result: SaveResult = await window.careerOps.saveCv({
       expectedRevision: snapshot.cv.revision,
-      content: element<HTMLTextAreaElement>('#cv-document').value,
+      content: cvEditor.getMarkdown(),
     });
     if (result.ok === false) {
       showNotice(
@@ -1969,7 +3004,7 @@ async function loadSnapshot(force = false): Promise<void> {
     if (atsWorkspace) await loadAtsWorkspaceView(false);
     if (materialsWorkspace) await loadMaterialsWorkspace(false);
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : '无法读取 career-ops 工作区。', 'error');
+    showNotice(error instanceof Error ? error.message : '无法读取求职资料库。', 'error');
   } finally {
     element<HTMLButtonElement>('#refresh-button').disabled = false;
   }
@@ -1977,23 +3012,23 @@ async function loadSnapshot(force = false): Promise<void> {
 
 async function chooseDirectory(): Promise<void> {
   if (!ensureNoUnsavedChanges()) return;
-  const button = element<HTMLButtonElement>('#choose-folder-button');
-  button.disabled = true;
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-connect-workspace]')];
+  buttons.forEach((button) => { button.disabled = true; });
   try {
     const result = await window.careerOps.selectDirectory();
     if (!result.cancelled && result.snapshot) {
-      renderSnapshot(result.snapshot);
-      await loadAnalysis();
       atsWorkspace = null;
       portalDraft = [];
-      setPortalDirty(false);
       materialsWorkspace = null;
       activeMaterialVersion = null;
+      renderSnapshot(result.snapshot);
+      setPortalDirty(false);
+      await loadAnalysis();
     }
   } catch (error) {
     showNotice(error instanceof Error ? error.message : '无法选择文件夹。', 'error');
   } finally {
-    button.disabled = false;
+    buttons.forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -2005,10 +3040,14 @@ async function showReport(name: string): Promise<void> {
   try {
     const report = await window.careerOps.readReport(name);
     documentNode.textContent = report.content;
+    const prepareButton = element<HTMLButtonElement>('#prepare-report-application-button');
+    prepareButton.dataset.prepareReport = name;
+    prepareButton.classList.remove('hidden');
     documentNode.classList.remove('hidden');
     placeholder.classList.add('hidden');
   } catch (error) {
     documentNode.textContent = '';
+    element('#prepare-report-application-button').classList.add('hidden');
     documentNode.classList.add('hidden');
     placeholder.classList.remove('hidden');
     showNotice(error instanceof Error ? error.message : '无法读取报告。', 'error');
@@ -2016,20 +3055,81 @@ async function showReport(name: string): Promise<void> {
 }
 
 function bindEvents(): void {
-  document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach((button) => {
+  element('#confirmation-cancel').addEventListener('click', () => resolveConfirmation(false));
+  element('#confirmation-action').addEventListener('click', () => resolveConfirmation(true));
+  element('#confirmation-dialog').addEventListener('wa-after-hide', () => {
+    if (confirmationResolver) resolveConfirmation(false);
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-section]').forEach((button) => {
     button.addEventListener('click', () => {
-      const view = button.dataset.view as ViewName;
-      switchView(view);
-      if (view === 'analysis' && !currentAnalysis) void loadAnalysis();
-      if (view === 'ats' && !atsWorkspace) void loadAtsWorkspaceView();
-      if (view === 'automation' && !automationWorkspace) void loadAutomationWorkspace();
-      if (view === 'materials' && !materialsWorkspace) void loadMaterialsWorkspace();
+      const section = button.dataset.section as NavigationSection;
+      activateRoute(DEFAULT_ROUTE[section]);
     });
   });
   document.querySelectorAll<HTMLButtonElement>('[data-open-view]').forEach((button) => {
-    button.addEventListener('click', () => switchView(button.dataset.openView as ViewName));
+    button.addEventListener('click', () => navigateToView(button.dataset.openView as ViewName));
   });
-  element('#choose-folder-button').addEventListener('click', () => void chooseDirectory());
+  element('#jobs-next-step-button').addEventListener('click', () => activateRoute(currentJobsNextRoute));
+  element('#pipeline-jobs').addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-select-job-id]');
+    if (button?.dataset.selectJobId) void selectPipelineJob(button.dataset.selectJobId);
+  });
+  element('#overview-jobs').addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-open-recommended-job-id]');
+    if (!button?.dataset.openRecommendedJobId) return;
+    activateRoute('jobs-inbox');
+    void selectPipelineJob(button.dataset.openRecommendedJobId);
+  });
+  element('#workbench-primary-action').addEventListener('click', () => {
+    const job = snapshot?.pipeline.jobs.find((candidate) => candidate.id === selectedJobId);
+    if (!job) return;
+    if (currentWorkbenchAction === 'evaluate') prepareJobEvaluation(job.url);
+    else if (currentWorkbenchAction === 'prepare-materials' && currentWorkbenchReportName) void openMaterialsForReport(currentWorkbenchReportName);
+    else if (currentWorkbenchAction === 'mark-applied') void markSelectedJobApplied();
+    else if (currentWorkbenchAction === 'view-tracker') openSelectedTracker();
+    else if (currentWorkbenchAction === 'view-materials' && currentWorkbenchReportName) void openMaterialsForReport(currentWorkbenchReportName);
+  });
+  element('#workbench-report-button').addEventListener('click', () => {
+    if (!currentWorkbenchReportName) return;
+    activateRoute('jobs-reports');
+    void showReport(currentWorkbenchReportName);
+  });
+  element('#workbench-materials-button').addEventListener('click', () => {
+    if (currentWorkbenchReportName) void openMaterialsForReport(currentWorkbenchReportName);
+  });
+  element('#workbench-tracker-button').addEventListener('click', openSelectedTracker);
+  element('#ats-job-body').addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-evaluate-url]');
+    if (button?.dataset.evaluateUrl) prepareJobEvaluation(button.dataset.evaluateUrl);
+  });
+  element('#profile-next-step-button').addEventListener('click', () => {
+    activateRoute(currentProfileNextRoute);
+    if (currentProfileNextTarget === 'verification') {
+      window.requestAnimationFrame(() => element('#verification-workspace').scrollIntoView({ block: 'start' }));
+    }
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-connect-workspace]').forEach((button) => {
+    button.addEventListener('click', () => void chooseDirectory());
+  });
+  element('#dismiss-guided-setup').addEventListener('click', () => {
+    guidedSetupDismissed = true;
+    element('#guided-setup').hidden = true;
+  });
+  element('#guided-next-button').addEventListener('click', () => {
+    if (currentGuidedAction === 'connect') {
+      void chooseDirectory();
+      return;
+    }
+    activateRoute(currentGuidedAction);
+    if (currentGuidedVerificationTarget) {
+      window.requestAnimationFrame(() => element('#verification-workspace').scrollIntoView({ block: 'start' }));
+    }
+  });
+  element('#guided-automation-button').addEventListener('click', () => activateRoute('settings-automation'));
+  element('#today-next-step-button').addEventListener('click', () => {
+    if (currentTodayChoosesFolder) void chooseDirectory();
+    else activateRoute(currentTodayNextRoute);
+  });
   element('#refresh-button').addEventListener('click', () => void loadSnapshot());
   element('#save-profile-button').addEventListener('click', () => void saveProfileChanges());
   element('#save-cv-button').addEventListener('click', () => void saveCvChanges());
@@ -2052,7 +3152,11 @@ function bindEvents(): void {
     void saveModelSettings();
   });
   element('#clear-model-key-button').addEventListener('click', () => {
-    if (window.confirm('确定要清除已加密保存的 API Key 吗？')) void saveModelSettings(true);
+    void confirmAction('确定要清除已加密保存的 API Key 吗？', {
+      title: '清除 API Key', action: '清除 Key', tone: 'danger',
+    }).then((confirmed) => {
+      if (confirmed) void saveModelSettings(true);
+    });
   });
   element('#model-service-tabs').addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-ai-service-id]');
@@ -2164,8 +3268,11 @@ function bindEvents(): void {
   element('#ats-filters-panel').addEventListener('change', () => setPortalDirty(true));
   element('#open-generated-report-button').addEventListener('click', () => {
     if (!currentJobEvaluation) return;
-    switchView('reports');
+    navigateToView('reports');
     void showReport(currentJobEvaluation.reportName);
+  });
+  element('#prepare-application-button').addEventListener('click', () => {
+    if (currentJobEvaluation) void openMaterialsForReport(currentJobEvaluation.reportName);
   });
   document.querySelectorAll<HTMLButtonElement>('[data-advice-filter]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -2189,9 +3296,39 @@ function bindEvents(): void {
     downgradeLinkedFact(target);
     setProfileDirty(true);
   });
-  element<HTMLTextAreaElement>('#cv-document').addEventListener('input', () => {
-    setCvDirty(true);
+  document.querySelectorAll<HTMLButtonElement>('[data-verification-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      verificationFilter = button.dataset.verificationFilter as VerificationFilter;
+      selectedVerificationIds.clear();
+      document.querySelectorAll<HTMLButtonElement>('[data-verification-filter]').forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle('active', active);
+        candidate.setAttribute('aria-pressed', String(active));
+      });
+      renderVerification();
+    });
   });
+  element('#verification-clear-selection').addEventListener('click', () => {
+    selectedVerificationIds.clear();
+    renderVerification();
+  });
+  element('#verification-confirm-selected').addEventListener('click', () => {
+    void (async () => {
+      const selected = verificationDraft.filter((item) => selectedVerificationIds.has(item.id) && item.status !== 'verified');
+      if (!selected.length) return;
+      const confirmed = await confirmAction(
+        `确认这 ${selected.length} 项资料准确，并允许用于简历和申请材料？`,
+        { title: '确认所选资料', action: `确认 ${selected.length} 项` },
+      );
+      if (!confirmed) return;
+      selected.forEach((item) => { item.status = 'verified'; });
+      selectedVerificationIds.clear();
+      setProfileDirty(true);
+      setText('#verification-save-message', `${selected.length} 项资料已核对；保存后才会用于简历和申请材料。`);
+      renderVerification();
+    })();
+  });
+  element('#verification-save-button').addEventListener('click', () => void saveProfileChanges());
   element<HTMLInputElement>('#pipeline-search').addEventListener('input', (event) => {
     pipelineQuery = (event.currentTarget as HTMLInputElement).value;
     if (snapshot) renderPipeline(snapshot);
@@ -2221,6 +3358,15 @@ function bindEvents(): void {
     event.preventDefault();
     void submitOutcome();
   });
+  element('#applications-next-step-button').addEventListener('click', () => activateRoute(currentApplicationsNextRoute));
+  element('#tracker-body').addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-prepare-report]');
+    if (button?.dataset.prepareReport) void openMaterialsForReport(button.dataset.prepareReport);
+  });
+  element('#prepare-report-application-button').addEventListener('click', (event) => {
+    const reportName = (event.currentTarget as HTMLButtonElement).dataset.prepareReport;
+    if (reportName) void openMaterialsForReport(reportName);
+  });
   element('#report-list').addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-report]');
     if (button?.dataset.report) void showReport(button.dataset.report);
@@ -2228,6 +3374,8 @@ function bindEvents(): void {
 }
 
 bindEvents();
+renderIcons();
+activateRoute('today');
 void loadAiSettings();
 void window.careerOps.getScanStatus().then(renderScanStatus);
 void loadSnapshot(true);

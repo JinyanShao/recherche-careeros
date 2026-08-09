@@ -93,14 +93,50 @@ fact_verification:
       status: verified
       evidence: "Fixture evidence"
       note: ""
+    identity.headline:
+      label: "Headline"
+      category: "Identity"
+      source: "config/profile.yml#narrative.headline"
+      status: unverified
+      evidence: ""
+      note: ""
 `;
 
 await Promise.all([
   writeFile(path.join(fixtureRoot, 'AGENTS.md'), '# Fixture\n'),
   writeFile(path.join(fixtureRoot, 'scan.mjs'), 'export {};\n'),
-  writeFile(path.join(fixtureRoot, 'cv.md'), '# Fixture Candidate\n\n## Summary\n\nFixture summary.\n'),
+  writeFile(path.join(fixtureRoot, 'cv.md'), `# Fixture Candidate
+
+<!-- preserved cv comment -->
+
+## Summary
+
+Fixture summary.
+
+## Experience
+
+### Fixture Developer
+
+- Built a fixture service.
+
+## Projects
+
+### Fixture API
+
+Test fixture project.
+
+## Skills
+
+Python, FastAPI, SQL
+`),
   writeFile(path.join(fixtureRoot, 'config', 'profile.yml'), profile),
-  writeFile(path.join(fixtureRoot, 'data', 'pipeline.md'), '# Pipeline\n'),
+  writeFile(path.join(fixtureRoot, 'data', 'pipeline.md'), `# Pipeline
+
+## Pending
+
+- [ ] https://example.com/jobs/backend | Fixture Labs | Backend Engineer | Fribourg, Switzerland | posted:2026-08-01 | trust:90
+- [ ] https://example.com/jobs/platform | Example Systems | Platform Engineer | Remote | posted:2026-07-31 | trust:82
+`),
   writeFile(path.join(fixtureRoot, 'data', 'applications.md'), '# Applications Tracker\n\n| # | Date | Company | Role | Score | Status | PDF | Report | Notes |\n|---|---|---|---|---|---|---|---|---|\n'),
 ]);
 
@@ -120,16 +156,54 @@ console.log('[stage2] app launched');
 
 try {
   const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1040, height: 720 });
   page.setDefaultTimeout(12_000);
   page.on('console', (message) => console.log(`[renderer:${message.type()}] ${message.text()}`));
   page.on('pageerror', (error) => console.log(`[renderer:error] ${error.message}`));
   console.log('[stage2] first window ready');
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent !== '—');
-  await page.locator('.nav-item[data-view="profile"]').click();
-  await assert.doesNotReject(() => page.waitForSelector('#verification-list .verification-row'));
+  await page.locator('#today-next-step-button').waitFor({ state: 'visible' });
+  assert.notEqual((await page.locator('#today-focus-heading').textContent())?.trim(), '');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.locator('#guided-setup').waitFor({ state: 'visible' });
+  assert.match((await page.locator('#guided-progress-label').textContent()) ?? '', /\d\/5 已完成/);
+  assert.equal(await page.locator('#choose-folder-button').isVisible(), false);
+  assert.equal((await page.locator('#sidebar-root').textContent())?.trim(), '资料已连接');
+  await page.locator('#dismiss-guided-setup').click();
+  assert.equal(await page.locator('#guided-setup').isHidden(), true);
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-inbox"]').click();
+  await page.locator('#job-workbench-content').waitFor({ state: 'visible' });
+  assert.equal((await page.locator('#workbench-role').textContent())?.trim(), 'Backend Engineer');
+  assert.equal((await page.locator('#workbench-primary-action').textContent())?.trim(), '评估这个岗位');
+  assert.equal(await page.locator('#pipeline-jobs .job-row.selected').count(), 1);
+  await page.locator('[data-select-job-id]').nth(1).click();
+  assert.equal((await page.locator('#workbench-company').textContent())?.trim(), 'Example Systems');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.locator('.nav-item[data-section="profile"]').click();
+  await assert.doesNotReject(() => page.waitForSelector('#verification-workspace'));
   console.log('[stage2] profile editor loaded');
   assert.equal(await page.locator('#field-full-name').inputValue(), 'Fixture Candidate');
-  assert.equal(await page.locator('#migration-boundary').textContent(), '运行时已断开旧 JSON');
+  assert.equal(await page.locator('#migration-boundary').textContent(), '旧资料来源已停用');
+  assert.equal(await page.locator('[data-verification-filter="attention"]').getAttribute('class'), 'active');
+  assert.equal(await page.locator('#verification-list [data-fact-id="identity.name"]').count(), 0);
+  await page.locator('[data-verification-filter="verified"]').click();
+  assert.equal(await page.locator('#verification-list [data-fact-id="identity.name"]').count(), 1);
+  await page.locator('[data-verification-filter="attention"]').click();
+  const attentionRow = page.locator('#verification-list .verification-row').first();
+  await attentionRow.locator('.verification-details-button').click();
+  await page.waitForFunction(() => document.activeElement?.classList.contains('verification-details-button'));
+  await attentionRow.locator('.verification-details-button').click();
+  await attentionRow.locator('input[type="checkbox"]').check();
+  assert.equal(await page.locator('#verification-bulk-actions').isVisible(), true);
+  await page.locator('[data-verification-filter="verified"]').click();
+  assert.equal(await page.locator('#verification-bulk-actions').isHidden(), true);
+  await page.locator('[data-verification-filter="attention"]').click();
+  await page.locator('#verification-list .verification-row').first().locator('input[type="checkbox"]').check();
+  await page.locator('#verification-confirm-selected').click();
+  await page.locator('#confirmation-action').click();
+  await page.waitForFunction(() => document.querySelector('#verification-bulk-actions')?.classList.contains('hidden'));
+  assert.equal(await page.locator('#verification-save-reminder').isVisible(), true);
 
   await page.locator('#field-full-name').evaluate((node) => {
     const input = node;
@@ -137,7 +211,7 @@ try {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   assert.equal(await page.locator('[data-fact-id="identity.name"] select').inputValue(), 'needs_review');
-  await page.getByRole('button', { name: '保存资料' }).click();
+  await page.locator('#verification-save-button').click();
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('资料已保存'));
   console.log('[stage2] profile save verified');
 
@@ -152,7 +226,7 @@ try {
     path.join(fixtureRoot, 'config', 'profile.yml'),
     `${savedProfile}\n# external concurrent change\n`,
   );
-  await page.getByRole('button', { name: '保存资料' }).click();
+  await page.locator('#save-profile-button').click();
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('其他进程修改'));
   console.log('[stage2] conflict rejection verified');
   assert.equal(await page.locator('#field-headline').inputValue(), 'Unsaved conflict draft');
@@ -161,33 +235,22 @@ try {
     /# external concurrent change/,
   );
 
-  await page.locator('.nav-item[data-view="cv"]').click();
-  await page.locator('#cv-document').fill(`# Updated Fixture Candidate
-
-## Summary
-
-Updated CV.
-
-## Experience
-
-### Fixture Developer
-
-- Built a fixture service.
-
-## Projects
-
-### Fixture API
-
-Test fixture project.
-
-## Skills
-
-Python, FastAPI, SQL
-`);
+  await page.locator('.nav-item[data-section="profile"]').click();
+  await page.locator('[data-route="profile-cv"]').click();
+  const cvEditor = page.locator('#cv-visual-editor [contenteditable="true"]');
+  await cvEditor.waitFor();
+  const summaryParagraph = cvEditor.locator('p').filter({ hasText: 'Fixture summary.' });
+  await summaryParagraph.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Updated CV.');
+  await page.getByRole('button', { name: '保存 CV' }).waitFor({ state: 'visible' });
+  await page.waitForFunction(() => !document.querySelector('#save-cv-button')?.hasAttribute('disabled'));
   await page.getByRole('button', { name: '保存 CV' }).click();
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('CV 已保存'));
   console.log('[stage2] CV save verified');
-  assert.match(await readFile(path.join(fixtureRoot, 'cv.md'), 'utf8'), /Updated CV/);
+  const savedCv = await readFile(path.join(fixtureRoot, 'cv.md'), 'utf8');
+  assert.match(savedCv, /Updated CV/);
+  assert.match(savedCv, /preserved cv comment/);
 
   const exposedMethods = await page.evaluate(() => Object.keys(window.careerOps).sort());
   assert.deepEqual(exposedMethods, [
@@ -229,11 +292,12 @@ Python, FastAPI, SQL
     'updateTrackerStatus',
   ]);
 
-  await page.locator('.nav-item[data-view="analysis"]').click();
+  await page.locator('.nav-item[data-section="profile"]').click();
+  await page.locator('[data-route="profile-analysis"]').click();
   await page.waitForSelector('#analysis-advice .advice-row');
   const analysisScore = Number(await page.locator('#analysis-score').textContent());
   assert.ok(analysisScore >= 0 && analysisScore <= 100);
-  assert.equal(await page.locator('#market-sample').textContent(), '0');
+  assert.equal(await page.locator('#market-sample').textContent(), '2');
   const technicalProof = page.locator('.dimension-row').filter({ hasText: 'Technical proof' });
   assert.match(await technicalProof.locator('p').textContent() ?? '', /1 experience entries, 1 projects, 3 listed skills/);
   await page.locator('#positioning-confirm-checkbox').check();

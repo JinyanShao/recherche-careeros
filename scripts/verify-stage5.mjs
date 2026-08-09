@@ -79,6 +79,7 @@ https://example.com/jobs/expired\t2026-07-28\tashby-api\tBackend Developer\tSlow
 
 await Promise.all([
   writeFile(path.join(fixtureRoot, 'AGENTS.md'), '# Fixture\n'),
+  writeFile(path.join(fixtureRoot, 'package.json'), '{"name":"career-ops-stage5-fixture","private":true}\n'),
   writeFile(path.join(fixtureRoot, 'cv.md'), '# Fixture Candidate\n\n## Summary\n\nPython backend engineer.\n'),
   writeFile(path.join(fixtureRoot, 'config/profile.yml'), 'candidate:\n  full_name: Fixture Candidate\nlocation:\n  country: Switzerland\ntarget_roles:\n  primary: [Backend Engineer]\n'),
   writeFile(path.join(fixtureRoot, 'modes/_profile.md'), '# Profile\n'),
@@ -102,7 +103,8 @@ try {
   const page = await app.firstWindow();
   page.setDefaultTimeout(20_000);
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent === 'Fixture Candidate');
-  await page.locator('.nav-item[data-view="ats"]').click();
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-discover"]').click();
   await page.waitForFunction(() => document.querySelector('#ats-total-jobs')?.textContent === '5');
   assert.equal(await page.locator('#ats-pipeline-jobs').textContent(), '1');
   assert.equal(await page.locator('#ats-health-count').textContent(), '1');
@@ -111,11 +113,12 @@ try {
   assert.match(await page.locator('#ats-job-body').textContent() ?? '', /已失效/);
   await page.screenshot({ path: path.join(projectRoot, 'stage-5-job-center.png'), fullPage: true });
 
-  await page.getByRole('button', { name: 'Provider 与 Portal' }).click();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await page.locator('[data-route="settings-sources"]').click();
   await page.waitForSelector('.portal-row');
   assert.equal(await page.locator('.portal-row').count(), 3);
   await page.locator('.portal-row').first().locator('input[data-portal-field="name"]').fill('Fixture Greenhouse');
-  await page.getByRole('button', { name: '保存 Portal' }).click();
+  await page.getByRole('button', { name: '保存职位来源' }).click();
   await page.waitForFunction(() => document.querySelector('#portal-save-state')?.textContent === '已安全保存');
   const saved = await readFile(path.join(fixtureRoot, 'portals.yml'), 'utf8');
   assert.match(saved, /stage5 portal comment must survive/);
@@ -124,14 +127,15 @@ try {
   assert.equal(backups.length, 1);
   await page.screenshot({ path: path.join(projectRoot, 'stage-5-portals.png'), fullPage: true });
 
-  await page.getByRole('button', { name: '岗位中心', exact: true }).click();
-  await page.getByRole('button', { name: '开始 Portal 扫描' }).click();
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-discover"]').click();
+  await page.locator('#start-scan-button').click();
   await page.waitForFunction(() => document.querySelector('#scan-state-label')?.textContent?.startsWith('已完成'));
   await page.waitForFunction(() => document.querySelector('#ats-total-jobs')?.textContent === '6');
 
-  await page.getByRole('button', { name: '全量反向扫描' }).click();
+  await page.getByRole('button', { name: '全量扫描' }).click();
   await page.locator('#full-since-days').fill('99');
-  await page.getByRole('button', { name: '开始全量反向扫描' }).click();
+  await page.locator('#start-scan-button').click();
   await page.waitForFunction(() => document.querySelector('#scan-state-label')?.textContent?.startsWith('扫描中'));
   await page.waitForFunction(() => document.querySelector('#scan-log')?.textContent?.includes('checkpoint saved'));
   await page.getByRole('button', { name: '停止扫描' }).click();
@@ -140,17 +144,18 @@ try {
 
   await page.locator('#full-since-days').fill('3');
   await page.locator('#full-resume').check();
-  await page.getByRole('button', { name: '开始全量反向扫描' }).click();
+  await page.locator('#start-scan-button').click();
   await page.waitForFunction(() => document.querySelector('#scan-state-label')?.textContent?.startsWith('已完成'));
   const finalRun = await page.evaluate(() => window.careerOps.getScanStatus());
   assert.equal(finalRun.result.resumed, true);
   await page.screenshot({ path: path.join(projectRoot, 'stage-5-scan-console.png'), fullPage: true });
 
-  await page.getByRole('button', { name: 'Provider 与 Portal' }).click();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await page.locator('[data-route="settings-sources"]').click();
   const firstName = page.locator('.portal-row').first().locator('input[data-portal-field="name"]');
   await firstName.fill('Conflict Draft Name');
   await appendFile(path.join(fixtureRoot, 'portals.yml'), '\n# external edit\n');
-  await page.getByRole('button', { name: '保存 Portal' }).click();
+  await page.getByRole('button', { name: '保存职位来源' }).click();
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('磁盘上被其他进程修改'));
   assert.equal(await firstName.inputValue(), 'Conflict Draft Name');
 

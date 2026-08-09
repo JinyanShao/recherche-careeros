@@ -24,7 +24,8 @@ const app = await electron.launch({
   ],
   env: {
     ...process.env,
-    CAREER_OPS_ROOT: '/Users/jinyanshao/Developer/ThirdParty-克隆的第三方项目/career-ops',
+    CAREER_OPS_ROOT: process.env.RECHERCHE_CAREER_OPS_SOURCE
+      || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops',
   },
 });
 
@@ -32,7 +33,8 @@ try {
   const page = await app.firstWindow();
   page.setDefaultTimeout(15_000);
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent === 'Jinyan Shao');
-  await page.locator('.nav-item[data-view="analysis"]').click();
+  await page.locator('.nav-item[data-section="profile"]').click();
+  await page.locator('[data-route="profile-analysis"]').click();
   await page.waitForSelector('#analysis-advice .advice-row');
 
   const horizontalOverflow = await page.locator('#analysis-content').evaluate((root) => {

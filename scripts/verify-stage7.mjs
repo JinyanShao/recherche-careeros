@@ -16,7 +16,8 @@ import path from 'node:path';
 import { _electron as electron } from 'playwright';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
-const careerOpsSource = '/Users/jinyanshao/Developer/ThirdParty-克隆的第三方项目/career-ops';
+const careerOpsSource = process.env.RECHERCHE_CAREER_OPS_SOURCE
+  || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage7-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
@@ -105,6 +106,7 @@ Low Fit Labs seeks a Java Engineer.
 `;
 
 await Promise.all([
+  cp(path.join(careerOpsSource, 'package.json'), path.join(fixtureRoot, 'package.json')),
   writeFile(path.join(fixtureRoot, 'AGENTS.md'), '# Fixture career-ops\n'),
   writeFile(path.join(fixtureRoot, 'scan.mjs'), 'export {};\n'),
   writeFile(path.join(fixtureRoot, 'cv.md'), cv),
@@ -186,6 +188,7 @@ const app = await electron.launch({
 
 try {
   const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1040, height: 720 });
   page.setDefaultTimeout(90_000);
   await page.waitForFunction(() => document.querySelector('#profile-name')?.textContent === 'Fixture Candidate');
   await page.evaluate((url) => window.careerOps.saveAiSettings({
@@ -200,7 +203,20 @@ try {
   assert.equal(initialSnapshot.reports.length, 2);
   const initialWorkspace = await page.evaluate(() => window.careerOps.getApplicationMaterialsWorkspace());
   assert.equal(initialWorkspace.reports.length, 2);
-  await page.locator('.nav-item[data-view="materials"]').click();
+
+  await page.locator('.nav-item[data-section="jobs"]').click();
+  await page.locator('[data-route="jobs-reports"]').click();
+  await page.locator('[data-report="001-fixture-labs-2026-07-31.md"]').click();
+  await page.locator('#prepare-report-application-button').waitFor({ state: 'visible' });
+  await page.locator('#prepare-report-application-button').click();
+  await page.waitForFunction(() => document.body.dataset.navigationRoute === 'applications-materials');
+  await page.waitForFunction(() => document.querySelector('#material-report')?.value === '001-fixture-labs-2026-07-31.md');
+  assert.equal(await page.locator('#applications-workflow-panel').isVisible(), true);
+  assert.equal(await page.locator('#application-flow-reports').textContent(), '2');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+
+  await page.locator('.nav-item[data-section="applications"]').click();
+  await page.locator('[data-route="applications-materials"]').click();
   await page.waitForFunction(() => document.querySelectorAll('#material-report option').length === 3, null, { timeout: 15_000 });
 
   await page.locator('#material-report').selectOption('002-low-fit-labs-2026-07-31.md');
@@ -219,17 +235,27 @@ try {
 
   invalidEvidence = false;
   await page.getByRole('button', { name: '生成新版本' }).click();
-  await page.waitForFunction(() => document.querySelector('#material-generation-state')?.textContent?.includes('v001 已完成'));
+  try {
+    await page.waitForFunction(() => document.querySelector('#material-generation-state')?.textContent?.includes('v001 已完成'));
+  } catch (error) {
+    console.error(JSON.stringify({
+      state: await page.locator('#material-generation-state').textContent(),
+      notice: await page.locator('#notice').textContent(),
+    }));
+    throw error;
+  }
   const firstDirectory = path.join(fixtureRoot, 'output/application-materials/001-fixture-labs-backend-engineer/v001');
   for (const file of ['cv.html', 'cv.pdf', 'cv.tex', 'cv-latex.pdf', 'cover-letter.md', 'email.md', 'linkedin.md', 'manifest.json']) await stat(path.join(firstDirectory, file));
   assert.ok((await stat(path.join(firstDirectory, 'cv.pdf'))).size > 1_000);
   assert.ok((await stat(path.join(firstDirectory, 'cv-latex.pdf'))).size > 1_000);
   assert.match(await readFile(path.join(firstDirectory, 'manifest.json'), 'utf8'), /fixture-material-model/);
-  await page.locator('.nav-item[data-view="materials"]').click();
+  await page.locator('.nav-item[data-section="applications"]').click();
+  await page.locator('[data-route="applications-materials"]').click();
   await page.locator('.workspace').evaluate((node) => { node.scrollTop = 0; });
   await page.screenshot({ path: path.join(projectRoot, 'stage-7-application-materials.png'), fullPage: true });
 
-  await page.locator('.nav-item[data-view="materials"]').click();
+  await page.locator('.nav-item[data-section="applications"]').click();
+  await page.locator('[data-route="applications-materials"]').click();
   await page.locator('#material-version-note').fill('Second reviewed positioning');
   await page.getByRole('button', { name: '生成新版本' }).click();
   await page.waitForFunction(() => document.querySelector('#material-generation-state')?.textContent?.includes('v002 已完成'));
