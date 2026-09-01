@@ -157,7 +157,15 @@ function checkMarker(root: string, marker: typeof REQUIRED_MARKERS[number]): Val
 }
 
 export function validateCareerOpsRoot(inputRoot: string): CareerOpsValidation {
-  let root = path.resolve(inputRoot || path.sep);
+  if (!inputRoot.trim()) {
+    return {
+      root: '',
+      valid: false,
+      checks: REQUIRED_MARKERS.map((marker) => ({ ...marker, present: false })),
+      warnings: ['请选择 career-ops 工作区，或设置 RECHERCHE_CAREER_OPS_SOURCE=/path/to/career-ops。'],
+    };
+  }
+  let root = path.resolve(inputRoot);
   const warnings: string[] = [];
   try {
     if (!existsSync(root) || !lstatSync(root).isDirectory()) {

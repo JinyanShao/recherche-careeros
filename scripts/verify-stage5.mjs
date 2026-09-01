@@ -4,13 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { _electron as electron } from 'playwright';
 import { parseDocument } from 'yaml';
+import { configuredNodeExecutable } from './env.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage5-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
 const packagedExecutable = path.join(projectRoot, 'out/Recherche CareerOS-darwin-arm64/Recherche CareerOS.app/Contents/MacOS/Recherche CareerOS');
-const nodeExecutable = '/Users/jinyanshao/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node';
+const nodeExecutable = configuredNodeExecutable();
 await stat(packagedExecutable);
 await Promise.all([
   mkdir(path.join(fixtureRoot, 'config'), { recursive: true }),

@@ -96,7 +96,6 @@ import type {
   TrackerStatusChangeRequest,
 } from './contracts';
 
-const DEFAULT_CAREER_OPS_ROOT = '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
 const CHANNELS = {
   getSnapshot: 'career-ops:get-snapshot',
   selectDirectory: 'career-ops:select-directory',
@@ -140,7 +139,10 @@ let mainWindow: BrowserWindow | null = null;
 const headlessDailyBatch = process.argv.includes('--recherche-daily-batch');
 const rootArgumentIndex = process.argv.indexOf('--career-ops-root');
 const argumentRoot = rootArgumentIndex >= 0 ? process.argv[rootArgumentIndex + 1]?.trim() : '';
-let careerOpsRoot = argumentRoot || process.env.CAREER_OPS_ROOT?.trim() || DEFAULT_CAREER_OPS_ROOT;
+let careerOpsRoot = argumentRoot
+  || process.env.RECHERCHE_CAREER_OPS_SOURCE?.trim()
+  || process.env.CAREER_OPS_ROOT?.trim()
+  || '';
 const analysisCache = new Map<string, CompetitivenessAnalysis>();
 
 if (headlessDailyBatch) {

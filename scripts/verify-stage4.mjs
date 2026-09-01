@@ -11,6 +11,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { _electron as electron } from 'playwright';
+import { configuredNodeExecutable } from './env.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage4-'));
@@ -34,7 +35,7 @@ const electronExecutable = path.join(
   'MacOS',
   'Electron',
 );
-const nodeExecutable = '/Users/jinyanshao/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node';
+const nodeExecutable = configuredNodeExecutable();
 const today = new Date().toISOString().slice(0, 10);
 
 await stat(packagedExecutable);

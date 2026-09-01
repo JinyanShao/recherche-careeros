@@ -23,7 +23,9 @@ Recherche prepares and organizes application material, but it does not automatic
 - A compatible local `career-ops` workspace
 - An API key for AI-assisted evaluation and material generation
 
-The default `career-ops` path is currently configured in `src/main.ts`. It can be overridden with `CAREER_OPS_ROOT` or selected from the application.
+Recherche does not assume an author-specific `career-ops` path. Choose the workspace in the application, pass `--career-ops-root /path/to/career-ops`, or set `RECHERCHE_CAREER_OPS_SOURCE=/path/to/career-ops`. The older `CAREER_OPS_ROOT` variable is still accepted for compatibility.
+
+Verification scripts that need a real `career-ops` checkout fail fast when `RECHERCHE_CAREER_OPS_SOURCE` is missing. They use the current Node.js executable by default; set `RECHERCHE_NODE_PATH=/path/to/node` only when a specific Node binary is required.
 
 ## Development
 

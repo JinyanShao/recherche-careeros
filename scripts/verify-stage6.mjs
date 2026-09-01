@@ -17,10 +17,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { _electron as electron } from 'playwright';
+import { configuredNodeExecutable, requiredCareerOpsSource } from './env.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
-const careerOpsSource = process.env.RECHERCHE_CAREER_OPS_SOURCE
-  || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
+const careerOpsSource = requiredCareerOpsSource('verify-stage6');
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage6-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const launchAgents = path.join(fixtureRoot, 'LaunchAgents');
@@ -30,7 +30,7 @@ const requestLog = path.join(fixtureRoot, 'requests.log');
 const launchctlShim = path.join(fixtureRoot, 'launchctl-shim');
 const packagedExecutable = path.join(projectRoot, 'out/Recherche CareerOS-darwin-arm64/Recherche CareerOS.app/Contents/MacOS/Recherche CareerOS');
 const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
-const nodeExecutable = '/Users/jinyanshao/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node';
+const nodeExecutable = configuredNodeExecutable();
 const execFileAsync = promisify(execFile);
 await stat(packagedExecutable);
 

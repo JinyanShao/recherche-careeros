@@ -3,14 +3,14 @@ import { cp, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os';
 import path from 'node:path';
 import { _electron as electron } from 'playwright';
+import { configuredNodeExecutable, requiredCareerOpsSource } from './env.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
-const careerOpsSource = process.env.RECHERCHE_CAREER_OPS_SOURCE
-  || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops';
+const careerOpsSource = requiredCareerOpsSource('verify-stage8');
 const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage8-'));
 const electronData = path.join(fixtureRoot, 'electron-data');
 const electronExecutable = path.join(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
-const nodeExecutable = '/Users/jinyanshao/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node';
+const nodeExecutable = configuredNodeExecutable();
 
 await cp(careerOpsSource, fixtureRoot, {
   recursive: true,

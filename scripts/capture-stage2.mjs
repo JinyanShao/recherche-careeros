@@ -2,8 +2,10 @@ import path from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import { _electron as electron } from 'playwright';
+import { requiredCareerOpsSource } from './env.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
+const careerOpsSource = requiredCareerOpsSource('capture-stage2');
 const captureData = await mkdtemp(path.join(os.tmpdir(), 'recherche-stage2-capture-'));
 const electronExecutable = path.join(
   projectRoot,
@@ -23,8 +25,7 @@ const app = await electron.launch({
   ],
   env: {
     ...process.env,
-    CAREER_OPS_ROOT: process.env.RECHERCHE_CAREER_OPS_SOURCE
-      || '/Users/jinyanshao/Developer/Active-正在开发的正式项目/ThirdParty-克隆的第三方项目/career-ops',
+    CAREER_OPS_ROOT: careerOpsSource,
   },
 });
 
