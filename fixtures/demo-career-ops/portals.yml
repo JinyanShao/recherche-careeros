@@ -1,0 +1,22 @@
+title_filter:
+  positive:
+    - "Backend Engineer"
+    - "Software Engineer"
+  negative:
+    - "Senior"
+location_filter:
+  allow:
+    - "Switzerland"
+    - "Remote"
+  block: []
+max_posting_age_days: 30
+trust_filter:
+  enabled: true
+tracked_companies:
+  - name: "Helvetic Demo Labs"
+    careers_url: "https://example.com/careers"
+    enabled: true
+  - name: "Alpine Tools AG"
+    careers_url: "https://example.com/jobs"
+    enabled: true
+job_boards: []

@@ -1,0 +1,2 @@
+started_at	status	companies_scanned	errors	postings_seen	postings_kept	new	expired	duplicates	low_trust	blocked	manual_review	greenhouse	lever	ashby	workday	other	duration_ms	notes
+2026-09-01T08:00:00.000Z	completed	2	0	4	2	2	0	1	0	0	0	1	1	0	0	0	1200	demo fixture

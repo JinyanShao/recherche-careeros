@@ -1,0 +1,73 @@
+candidate:
+  full_name: "Alex Demo"
+  email: "alex.demo@example.invalid"
+  phone: ""
+  location: "Fribourg, Switzerland"
+target_roles:
+  primary:
+    - "Junior Backend Engineer"
+    - "Software Engineer"
+narrative:
+  headline: "Backend software engineer building local-first tools"
+  exit_story: "Synthetic demo profile used to show Recherche CareerOS without private data."
+  superpowers:
+    - "Backend APIs"
+    - "Automation"
+    - "Data validation"
+compensation:
+  target_range: "CHF 80k-100k"
+  currency: "CHF"
+  minimum: "CHF 75k"
+  location_flexibility: "Hybrid or remote in Switzerland"
+location:
+  country: "Switzerland"
+  city: "Fribourg"
+  timezone: "Europe/Zurich"
+language:
+  output: en
+spend_tier: demo
+work_preferences:
+  preferred_regions:
+    - "Fribourg"
+    - "Lausanne"
+    - "Zurich"
+    - "Remote Switzerland"
+  arrangements:
+    - "hybrid"
+    - "remote"
+  employment_types:
+    - "full-time"
+  max_posting_age_days: 30
+  other_requirements:
+    - "No automatic submission"
+  automatic_submission: false
+fact_verification:
+  schema_version: 1
+  migration:
+    state: completed
+    source_label: "Synthetic demo workspace"
+    source_updated_at: "2026-09-01"
+    migrated_at: "2026-09-01"
+    runtime_disconnected: true
+  items:
+    identity.name:
+      label: "Name"
+      category: "Identity"
+      source: "config/profile.yml#candidate.full_name"
+      status: verified
+      evidence: "Synthetic demo identity."
+      note: "Public fixture only."
+    identity.headline:
+      label: "Headline"
+      category: "Identity"
+      source: "config/profile.yml#narrative.headline"
+      status: verified
+      evidence: "Synthetic headline for public demo."
+      note: ""
+    target.backend:
+      label: "Backend target"
+      category: "Target role"
+      source: "config/profile.yml#target_roles.primary"
+      status: needs_review
+      evidence: "Demo target role."
+      note: "Review in a real workspace."
